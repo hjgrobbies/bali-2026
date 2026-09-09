@@ -189,20 +189,6 @@ tailwind.config = {
     .vault-row{grid-template-columns:auto 1fr auto;}
   }
 </style>
-
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0d5c5c">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Bali 2026">
-<style>
-/* iPhone app polish */
-body { padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom)); }
-.bottom-nav { padding-bottom: env(safe-area-inset-bottom); height: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom)); }
-main { padding-bottom: 24px; }
-button, select, input, textarea { -webkit-appearance: none; }
-</style>
-
 </head>
 <body>
 
@@ -353,23 +339,24 @@ button, select, input, textarea { -webkit-appearance: none; }
       <button onclick="toggleAcc('d3')" class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50">
         <div class="flex items-center gap-3">
           <span class="badge bg-coral/10 text-coral">20 Sept · Sun</span>
-          <span class="font-semibold text-slate">Slow Morning + Sundays Beach Club</span>
+          <span class="font-semibold text-slate">Breakfast + Hatch Market + Celebrate Sundays</span>
         </div>
         <span id="acc-chevron-d3" class="acc-chevron text-gray-400">▾</span>
       </button>
       <div id="acc-body-d3" class="acc-body px-5 pb-5 border-t border-gray-100">
         <div class="flex items-center justify-between mt-3 mb-3">
           <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide">Day status</p>
-          <select class="status-select inprogress" onchange="updateDayStatus('d3',this)">
+          <select class="status-select confirmed" onchange="updateDayStatus('d3',this)">
             <option value="pending">🔴 Pending</option>
-            <option value="inprogress" selected>🟡 In Progress</option>
-            <option value="confirmed">🟢 Confirmed</option>
+            <option value="inprogress">🟡 In Progress</option>
+            <option value="confirmed" selected>🟢 Confirmed</option>
           </select>
         </div>
         <div class="space-y-3">
-          <div class="flex gap-3 bg-yellow-50 rounded-xl p-3"><span class="text-xl">🌅</span><div><p class="font-semibold text-sm">Slow Morning + Breakfast</p><p class="text-xs text-gray-500 mt-1">No alarms. Breakfast at La Cama Bali, take it easy before the day club.</p></div></div>
-          <div class="flex gap-3 bg-blue-50 rounded-xl p-3"><span class="text-xl">🏋</span><div><p class="font-semibold text-sm">Bambu Fitness Bali <span class="badge bg-gray-200 text-gray-500 ml-2">Maybe</span></p><p class="text-xs text-gray-500 mt-1">Optional — a session here if you're feeling it before the beach club.</p></div></div>
-          <div class="flex gap-3 bg-purple-50 rounded-xl p-3"><span class="text-xl">🎶</span><div><p class="font-semibold text-sm">All Day — Sundays Beach Club <span class="badge bg-green-100 text-green-700 ml-2">Booked & Confirmed</span></p><p class="text-xs text-gray-500 mt-1">Full day at Sundays Beach Club, Uluwatu.</p></div></div>
+          <div class="flex gap-3 bg-yellow-50 rounded-xl p-3"><span class="text-xl">☕</span><div><p class="font-semibold text-sm">Breakfast ~8:30/9:00am — Milk & Madu or Bhukit Cafe</p><p class="text-xs text-gray-500 mt-1">Uluwatu. Choice between the two on the day.</p></div></div>
+          <div class="flex gap-3 bg-green-50 rounded-xl p-3"><span class="text-xl">🛍</span><div><p class="font-semibold text-sm">10:00am — Explore Hatch Uluwatu</p><p class="text-xs text-gray-500 mt-1">Market and browse.</p></div></div>
+          <div class="flex gap-3 bg-gray-50 rounded-xl p-3"><span class="text-xl">🚗</span><div><p class="font-semibold text-sm">11:00am–1:00pm — Making Way to Sundays Beach</p><p class="text-xs text-gray-500 mt-1">Travel time to Sundays Beach Club.</p></div></div>
+          <div class="flex gap-3 bg-purple-50 rounded-xl p-3"><span class="text-xl">🎶</span><div><p class="font-semibold text-sm">All Day — Sundays Beach Club: Celebrate Sundays <span class="badge bg-green-100 text-green-700 ml-2">Booked & Confirmed</span></p><p class="text-xs text-gray-500 mt-1">Event highlights: Sip & Paint, Face Painting, Hair Braiding, Airbrush Tattoos · Science Lab Class, Magician, Tarot Reading · Asado BBQ with live music from Dimas & Latinesia Band · Beachside Fireworks Display finale.</p></div></div>
         </div>
         <div class="mt-4">
           <label class="text-xs text-gray-400 uppercase tracking-wide block mb-1">📝 Day Notes</label>
@@ -1154,23 +1141,11 @@ function loadDayStatuses() {
   });
 }
 
-// ─── PENDING BANNER ───────────────────────────────────────────────────────────
+// ─── PENDING BANNER (disabled — most items now planned) ───────────────────
 function updatePendingBanners() {
-  const days = ['d1','d2','d3','d3b','d4','d5','d6','d7','d8','d9','d10','d11'];
-  const pending = days.filter(d => !dayStatuses[d] || dayStatuses[d] === 'pending').length;
-  const transfers = JSON.parse(localStorage.getItem(STORAGE_TRANSFERS) || '[]');
-  const pendingT = transfers.filter(t => t.status === 'pending').length;
-  const total = pending + pendingT;
   ['today-pending-banner','itinerary-pending-banner'].forEach(id => {
     const el = document.getElementById(id);
-    if (!el) return;
-    if (total > 0) {
-      el.innerHTML = `<div class="pending-alert" onclick="showTab('itinerary')">
-        ⚠️ <strong>${total} item${total > 1 ? 's' : ''} still Pending</strong> — ${pending} itinerary day${pending !== 1 ? 's' : ''}, ${pendingT} transfer${pendingT !== 1 ? 's' : ''}. Tap to review.
-      </div>`;
-    } else {
-      el.innerHTML = '';
-    }
+    if (el) el.innerHTML = '';
   });
 }
 
@@ -1191,9 +1166,11 @@ const DAY_DATA = {
     { time:'Dinner — 5:30pm, booked', items:['Abracadabra Restaurant, for sunset'] },
     { time:'Ideas / other options', items:['Bingin Beach Cliff Walk', 'Other eats: Rockfish, Tusk, Ours, Ulu Garden'] }
   ]},
-  '2026-09-20': { label: 'Uluwatu Day 3 🎶', dest: 'Uluwatu', summary: 'Slow morning, maybe Bambu Fitness, then all day at Sundays Beach Club (booked).', blocks: [
-    { time:'Morning', items:['Slow morning + breakfast', 'Bambu Fitness Bali (maybe)'] },
-    { time:'All Day', items:['Sundays Beach Club — booked & confirmed'] }
+  '2026-09-20': { label: 'Celebrate Sundays 🎶', dest: 'Uluwatu', summary: 'Breakfast, Hatch Uluwatu market, then all day at Sundays Beach Club for Celebrate Sundays (booked).', blocks: [
+    { time:'~8:30/9:00am', items:['Breakfast — Milk & Madu or Bhukit Cafe'] },
+    { time:'10:00am', items:['Explore Hatch Uluwatu (market)'] },
+    { time:'11:00am–1:00pm', items:['Making way to Sundays Beach'] },
+    { time:'All Day — booked & confirmed', items:['Sundays Beach Club: Celebrate Sundays — Sip & Paint, face painting, hair braiding, airbrush tattoos, Science Lab, Magician, Tarot Reading, Asado BBQ + live band, beachside fireworks finale'] }
   ]},
   '2026-09-21': { label: 'Uluwatu → Lembongan 🤿', dest: 'Uluwatu/Nusa Lembongan', summary: 'Fast boat to Nusa Lembongan (booked via Rocky Fast Cruise), then scooter/bike exploring.', blocks: [
     { time:'Morning', items:['Fast boat La Cama Bali → Gecko Villa — booked & confirmed (Rocky Fast Cruise)'] },
@@ -1988,12 +1965,5 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 </script>
-
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
-}
-</script>
-
 </body>
 </html>
