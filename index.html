@@ -1,0 +1,1980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Bali 2026 — Travel Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        ocean:  { DEFAULT:'#0d5c5c', mid:'#1a6b6b', light:'#2a9090', pale:'#e6f4f4' },
+        coral:  { DEFAULT:'#d96b45', light:'#f0956a', pale:'#fdf0ea' },
+        jungle: { DEFAULT:'#1e3a2a', mid:'#2d5a3d', light:'#3a7a50', pale:'#eaf4ee' },
+        sand:   { DEFAULT:'#f5ede0', dark:'#e8d5be', light:'#fdf8f2' },
+        golden: { DEFAULT:'#b8832a', light:'#d4a245', pale:'#fdf3e3' },
+        dusk:   { DEFAULT:'#7a3d5e', light:'#a0547e' },
+        slate:  { DEFAULT:'#334155' },
+      },
+      fontFamily: {
+        display:['Cormorant Garamond','Georgia','serif'],
+        body:   ['Jost','sans-serif'],
+      },
+    }
+  }
+}
+</script>
+<style>
+  :root {
+    --hero-from:#071e1e; --hero-mid:#0f2e1e; --hero-to:#0d1e35;
+    --glass-bg:rgba(255,255,255,0.08); --glass-border:rgba(255,255,255,0.15);
+    --card-shadow:0 4px 24px rgba(0,0,0,0.08);
+    --transition:.25s cubic-bezier(.4,0,.2,1);
+    --bottom-nav-h:64px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Jost',sans-serif;background:#f5ede0;color:#1e2d2d;min-height:100vh;padding-bottom:var(--bottom-nav-h);}
+
+  /* HERO */
+  .hero{background:linear-gradient(135deg,var(--hero-from) 0%,var(--hero-mid) 50%,var(--hero-to) 100%);position:relative;overflow:hidden;}
+  .hero-grain{position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");opacity:.4;pointer-events:none;}
+  .hero-orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.18;pointer-events:none;}
+
+  /* GLASS */
+  .glass{background:var(--glass-bg);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--glass-border);}
+
+  /* TABS — hidden, controlled via bottom nav */
+  .tab-panel{display:none;animation:fadeUp .3s ease;}
+  .tab-panel.active{display:block;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+
+  /* BOTTOM NAV */
+  .bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:#fff;border-top:1px solid #e5e7eb;display:flex;height:var(--bottom-nav-h);padding-bottom:env(safe-area-inset-bottom);}
+  .bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.6rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#9ca3af;border:none;background:none;cursor:pointer;transition:color .2s;-webkit-tap-highlight-color:transparent;padding:0;}
+  .bnav-btn .bnav-icon{font-size:1.25rem;line-height:1;}
+  .bnav-btn.active{color:#1a6b6b;}
+  .bnav-btn.active .bnav-icon{filter:drop-shadow(0 0 4px rgba(26,107,107,0.4));}
+
+  /* FLOATING BUTTONS */
+  .fab-today{position:fixed;right:1rem;bottom:calc(var(--bottom-nav-h) + 1rem);z-index:99;background:#1a6b6b;color:#fff;border:none;border-radius:50%;width:48px;height:48px;font-size:1.1rem;cursor:pointer;box-shadow:0 4px 16px rgba(13,92,92,.35);transition:transform .2s,box-shadow .2s;display:flex;align-items:center;justify-content:center;}
+  .fab-today:hover{transform:scale(1.08);box-shadow:0 6px 22px rgba(13,92,92,.45);}
+  .fab-expense{position:fixed;left:1rem;bottom:calc(var(--bottom-nav-h) + 1rem);z-index:99;background:#d96b45;color:#fff;border:none;border-radius:50%;width:48px;height:48px;font-size:1.3rem;cursor:pointer;box-shadow:0 4px 16px rgba(217,107,69,.35);transition:transform .2s,box-shadow .2s;display:flex;align-items:center;justify-content:center;}
+  .fab-expense:hover{transform:scale(1.08);}
+
+  /* QUICK ADD EXPENSE MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:flex-end;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal-sheet{background:#fff;border-radius:1.5rem 1.5rem 0 0;padding:1.5rem;width:100%;max-width:480px;animation:slideUp .3s ease;}
+  @keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+
+  /* CARDS */
+  .card{background:#fff;border-radius:1.25rem;box-shadow:var(--card-shadow);}
+  .stay-card{background:#fff;border-radius:1.25rem;box-shadow:var(--card-shadow);overflow:hidden;transition:transform .2s ease,box-shadow .2s ease;}
+  .stay-card:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,0.12);}
+
+  /* BADGE */
+  .badge{display:inline-flex;align-items:center;gap:.3rem;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.25rem .65rem;border-radius:100px;}
+
+  /* STATUS BADGES */
+  .status-confirmed{background:#dcfce7;color:#166534;}
+  .status-inprogress{background:#fef9c3;color:#854d0e;}
+  .status-pending{background:#fee2e2;color:#991b1b;}
+
+  /* STATUS DROPDOWN */
+  .status-select{font-size:.7rem;font-weight:700;border:none;background:transparent;cursor:pointer;padding:.2rem .4rem;border-radius:.4rem;}
+  .status-select.confirmed{background:#dcfce7;color:#166534;}
+  .status-select.inprogress{background:#fef9c3;color:#854d0e;}
+  .status-select.pending{background:#fee2e2;color:#991b1b;}
+
+  /* PENDING ALERT BANNER */
+  .pending-alert{background:#fffbeb;border:1.5px solid #fcd34d;color:#92400e;border-radius:1rem;padding:.75rem 1rem;margin-bottom:1rem;font-size:.82rem;cursor:pointer;transition:all .2s;}
+  .pending-alert:hover{background:#fef3c7;}
+
+  /* ACCORDION */
+  .acc-body{display:none;overflow:hidden;}
+  .acc-body.open{display:block;animation:fadeUp .2s ease;}
+  .acc-chevron{display:inline-block;transition:transform .25s ease;}
+  .acc-chevron.open{transform:rotate(180deg);}
+
+  /* DISTANCE */
+  .dist-item{display:flex;align-items:center;gap:.6rem;padding:.45rem .8rem;border-radius:.6rem;background:#f8faf8;margin-bottom:.35rem;font-size:.8rem;}
+  .dist-mode{font-size:1rem;width:1.4rem;text-align:center;}
+  .dist-name{flex:1;color:#374151;font-weight:500;}
+  .dist-km{font-size:.75rem;color:#6b7280;white-space:nowrap;}
+
+  /* PROGRESS */
+  .pbar{height:8px;border-radius:6px;background:#e5e7eb;overflow:hidden;}
+  .pbar-fill{height:100%;border-radius:6px;transition:width .6s ease;}
+
+  /* EXPENSE TABLE */
+  .exp-row{display:grid;grid-template-columns:1fr 2fr 1fr auto;gap:.5rem;align-items:center;padding:.7rem 1rem;border-bottom:1px solid #f0f0f0;font-size:.82rem;}
+  .exp-row:last-child{border-bottom:none;}
+
+  /* PACKING — 3 states */
+  .pack-item{display:flex;align-items:center;gap:.75rem;padding:.55rem .8rem;border-radius:.6rem;cursor:pointer;transition:background .15s;}
+  .pack-item:hover{background:#f5f5f5;}
+  .pack-item.packed .pack-label{text-decoration:line-through;color:#9ca3af;}
+  .pack-item.hand-luggage .pack-label{color:#1a6b6b;font-weight:600;}
+  .pack-item.hand-luggage{background:#e6f4f4;}
+  .pack-cycle{width:1.5rem;height:1.5rem;border-radius:.4rem;border:2px solid #d1d5db;flex-shrink:0;font-size:.65rem;display:flex;align-items:center;justify-content:center;font-weight:700;transition:all .15s;}
+  .pack-item.packed .pack-cycle{background:#10b981;border-color:#10b981;color:#fff;}
+  .pack-item.hand-luggage .pack-cycle{background:#1a6b6b;border-color:#1a6b6b;color:#fff;}
+
+  /* COUNTDOWN */
+  .cd-block{text-align:center;padding:.6rem 1.1rem;min-width:4.5rem;}
+  .cd-num{font-family:'Cormorant Garamond',serif;font-size:2.4rem;font-weight:700;line-height:1;color:#fff;}
+  .cd-label{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-top:.15rem;}
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar{width:4px;height:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:#c8922a55;border-radius:4px;}
+
+  /* INPUTS */
+  .cur-input{width:100%;padding:.65rem 1rem;border:1.5px solid #e5e7eb;border-radius:.75rem;font-size:1rem;font-family:'Jost',sans-serif;outline:none;transition:border-color .2s;}
+  .cur-input:focus{border-color:#1a6b6b;}
+
+  /* WARNINGS */
+  .warn-red{background:#fef2f2;border:1.5px solid #fca5a5;color:#b91c1c;}
+  .warn-orange{background:#fffbeb;border:1.5px solid #fcd34d;color:#92400e;}
+
+  /* TIP BOX */
+  .tip-box{background:#e6f4f4;border-left:3px solid #1a6b6b;border-radius:0 .75rem .75rem 0;padding:.85rem 1rem;font-size:.8rem;color:#1e2d2d;}
+
+  /* MAP BTN */
+  .map-btn{display:inline-flex;align-items:center;gap:.4rem;background:#1a6b6b;color:#fff;font-size:.74rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:.45rem 1rem;border-radius:.6rem;text-decoration:none;transition:background .2s;}
+  .map-btn:hover{background:#0d5c5c;}
+
+  /* CONTACT BOOK */
+  .contact-row{display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;border-bottom:1px solid #f0f0f0;}
+  .contact-row:last-child{border-bottom:none;}
+
+  /* BOOKING VAULT */
+  .vault-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:.75rem;align-items:center;padding:.75rem 1rem;border-bottom:1px solid #f0f0f0;font-size:.82rem;}
+  .vault-row:last-child{border-bottom:none;}
+
+  /* DAILY NOTES */
+  .day-note{width:100%;min-height:80px;padding:.65rem 1rem;border:1.5px solid #e5e7eb;border-radius:.75rem;font-size:.82rem;font-family:'Jost',sans-serif;resize:vertical;outline:none;transition:border-color .2s;}
+  .day-note:focus{border-color:#1a6b6b;}
+
+  html{scroll-behavior:smooth;}
+
+  /* TODAY PANEL */
+  .time-block{border-left:3px solid transparent;padding:.6rem .8rem .6rem 1rem;margin-bottom:.5rem;border-radius:0 .75rem .75rem 0;}
+  .time-block.morning{border-color:#f0956a;background:#fdf0ea;}
+  .time-block.afternoon{border-color:#1a6b6b;background:#e6f4f4;}
+  .time-block.evening{border-color:#7a3d5e;background:#f5eef5;}
+
+  /* TRANSPORT CARDS */
+  .transfer-card{background:#fff;border-radius:1rem;box-shadow:var(--card-shadow);overflow:hidden;margin-bottom:.75rem;}
+  .transfer-route{display:flex;align-items:center;gap:.5rem;font-size:.8rem;font-weight:600;color:#1a6b6b;}
+
+  /* DARK MODE */
+  body.dark{background:#0f1a1a;color:#e5f0f0;}
+  body.dark .card,body.dark .stay-card,body.dark .transfer-card{background:#1a2a2a;box-shadow:0 4px 24px rgba(0,0,0,.3);}
+  body.dark .bottom-nav{background:#1a2a2a;border-top-color:#2d4040;}
+  body.dark .bnav-btn{color:#5a7a7a;}
+  body.dark .bnav-btn.active{color:#2a9090;}
+  body.dark input,body.dark select,body.dark textarea{background:#0f1a1a;color:#e5f0f0;border-color:#2d4040;}
+  body.dark .acc-body > div,body.dark .acc-body .time-block{filter:brightness(.88);}
+
+  @media(max-width:640px){
+    .cd-num{font-size:1.8rem;}
+    .exp-row{grid-template-columns:1fr 1.5fr 1fr auto;}
+    .vault-row{grid-template-columns:auto 1fr auto;}
+  }
+</style>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d5c5c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bali 2026">
+<style>body{padding-bottom:calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));}.bottom-nav{padding-bottom:env(safe-area-inset-bottom);height:calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));}</style>
+
+</head>
+<body>
+
+<!-- ===== HERO ===== -->
+<header class="hero" id="top">
+  <div class="hero-grain"></div>
+  <div class="hero-orb" style="width:500px;height:500px;background:#1a6b6b;top:-200px;right:-150px;"></div>
+  <div class="hero-orb" style="width:350px;height:350px;background:#2d5a3d;bottom:-100px;left:-80px;"></div>
+
+  <div class="max-w-5xl mx-auto px-4 py-10 md:py-14 relative z-10">
+    <div class="flex items-center gap-2 mb-4 flex-wrap">
+      <span class="glass text-white/70 text-xs tracking-widest uppercase px-3 py-1 rounded-full">✈ JNB → DPS → JNB</span>
+      <span class="glass text-white/70 text-xs tracking-widest uppercase px-3 py-1 rounded-full">Emirates EK762 / EK368 via Dubai</span>
+      <button onclick="toggleDark()" class="glass text-white/70 text-xs tracking-widest uppercase px-3 py-1 rounded-full hover:bg-white/10 transition-all cursor-pointer border-0" id="dark-toggle">🌙 Dark Mode</button>
+    </div>
+    <h1 class="font-display text-5xl md:text-7xl font-semibold text-white leading-none mb-2">
+      Bali <em class="text-coral-light">2026</em>
+    </h1>
+    <p class="text-white/60 text-sm tracking-widest uppercase mb-8">18 September – 28 September · 2 Travellers · 4 Destinations · 10 Nights</p>
+
+    <div class="flex flex-wrap gap-2 mb-8">
+      <span class="glass text-white/85 text-xs font-medium px-3 py-1.5 rounded-full border border-white/10">🌊 Uluwatu · 18–21 Sept</span>
+      <span class="glass text-white/85 text-xs font-medium px-3 py-1.5 rounded-full border border-white/10">🤿 Lembongan · 21–23 Sept</span>
+      <span class="glass text-white/85 text-xs font-medium px-3 py-1.5 rounded-full border border-white/10">🌾 Ubud · 23–26 Sept</span>
+      <span class="glass text-white/85 text-xs font-medium px-3 py-1.5 rounded-full border border-white/10">🎶 Canggu · 26–28 Sept</span>
+    </div>
+
+    <div class="glass rounded-2xl p-5 max-w-lg">
+      <p class="text-white/50 text-xs tracking-widest uppercase mb-3">⏱ Countdown to departure</p>
+      <div class="flex gap-1 items-center">
+        <div class="cd-block"><div class="cd-num" id="cd-days">—</div><div class="cd-label">Days</div></div>
+        <div class="text-white/30 text-2xl font-light pb-4">:</div>
+        <div class="cd-block"><div class="cd-num" id="cd-hours">—</div><div class="cd-label">Hours</div></div>
+        <div class="text-white/30 text-2xl font-light pb-4">:</div>
+        <div class="cd-block"><div class="cd-num" id="cd-mins">—</div><div class="cd-label">Mins</div></div>
+        <div class="text-white/30 text-2xl font-light pb-4">:</div>
+        <div class="cd-block"><div class="cd-num" id="cd-secs">—</div><div class="cd-label">Secs</div></div>
+      </div>
+      <p class="text-white/35 text-xs mt-2">Departing JNB 17 September 2026 · 13:30 local</p>
+    </div>
+  </div>
+</header>
+
+<!-- ===== MAIN ===== -->
+<main class="max-w-5xl mx-auto px-4 py-7 md:py-9">
+
+<!-- ================================================================ -->
+<!-- TODAY                                                             -->
+<!-- ================================================================ -->
+<div id="panel-today" class="tab-panel active">
+  <div id="today-pending-banner"></div>
+
+  <div id="today-content">
+    <!-- dynamically rendered -->
+  </div>
+</div>
+
+
+<!-- ================================================================ -->
+<!-- ITINERARY                                                         -->
+<!-- ================================================================ -->
+<div id="panel-itinerary" class="tab-panel">
+  <div id="itinerary-pending-banner"></div>
+
+  <!-- ---- ULUWATU ---- -->
+  <div class="mb-6">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-11 h-11 rounded-xl bg-coral/10 flex items-center justify-center text-2xl">🌊</div>
+      <div>
+        <h3 class="font-display text-xl font-bold text-slate">Uluwatu — 3 Nights</h3>
+        <p class="text-sm text-gray-400">18–21 Sept · La Cama Bali · Jl. Pantai Bingin <span class="badge bg-green-100 text-green-700 ml-1">Booked & Confirmed</span></p>
+      </div>
+    </div>
+
+    <!-- Day 1 -->
+    <div class="card mb-2.5 overflow-hidden">
+      <button onclick="toggleAcc('d1')" class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50">
+        <div class="flex items-center gap-3">
+          <span class="badge bg-coral/10 text-coral">18 Sept · Fri</span>
+          <span class="font-semibold text-slate">Arrival Day — Gojek/Grab In, No Going Out</span>
+        </div>
+        <span id="acc-chevron-d1" class="acc-chevron text-gray-400">▾</span>
+      </button>
+      <div id="acc-body-d1" class="acc-body px-5 pb-5 border-t border-gray-100">
+        <div class="flex items-center justify-between mt-3 mb-3">
+          <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide">Day status</p>
+          <select class="status-select inprogress" onchange="updateDayStatus('d1',this)">
+            <option value="pending">🔴 Pending</option>
+            <option value="inprogress" selected>🟡 In Progress</option>
+            <option value="confirmed">🟢 Confirmed</option>
+          </select>
+        </div>
+        <div class="space-y-3">
+          <div class="flex gap-3 bg-orange-50 rounded-xl p-3"><span class="text-xl">✈</span><div><p class="font-semibold text-sm">Arrive Denpasar (DPS) ~16:35 <span class="badge bg-green-100 text-green-700 ml-2">Transport Organized</span></p><p class="text-xs text-gray-500 mt-1">Emirates EK368. La Cama Bali has organized the airport transfer — they've been given the flight details and will be in contact 1–2 days before with the details.</p></div></div>
+          <div class="flex gap-3 bg-gray-50 rounded-xl p-3"><span class="text-xl">🛵</span><div><p class="font-semibold text-sm">Evening — Gojek/Grab for Food & Necessities</p><p class="text-xs text-gray-500 mt-1">Not going out for dinner — order food and anything needed for the night via Gojek/Grab and settle in after the flight.</p></div></div>
+        </div>
+        <div class="mt-4">
+          <label class="text-xs text-gray-400 uppercase tracking-wide block mb-1">📝 Day Notes</label>
+          <textarea class="day-note" id="note-d1" placeholder="Add your own notes for this day..." onblur="saveNote('d1',this.value)"></textarea>
+        </div>
+        <div class="mt-3 space-y-2">
+          <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold">➕ Custom Activity</p>
+          <div id="custom-d1" class="space-y-1"></div>
+          <button onclick="addCustomActivity('d1')" class="text-xs text-ocean-mid font-semibold hover:underline">+ Add activity</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 2 -->
+    <div class="card mb-2.5 overflow-hidden">
+      <button onclick="toggleAcc('d2')" class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50">
+        <div class="flex items-center gap-3">
+          <span class="badge bg-coral/10 text-coral">19 Sept · Sat</span>
+          <span class="font-semibold text-slate">Uluwatu Day 2 — Malini Lunch + Abracadabra Sunset</span>
+        </div>
+        <span id="acc-chevron-d2" class="acc-chevron text-gray-400">▾</span>
+      </button>
+      <div id="acc-body-d2" class="acc-body px-5 pb-5 border-t border-gray-100">
+        <div class="flex items-center justify-between mt-3 mb-3">
+          <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide">Day status</p>
+          <select class="status-select inprogress" onchange="updateDayStatus('d2',this)">
+            <option value="pending">🔴 Pending</option>
+            <option value="inprogress" selected>🟡 In Progress</option>
+            <option value="confirmed">🟢 Confirmed</option>
+          </select>
+        </div>
+        <div class="space-y-3">
+          <div class="flex gap-3 bg-gray-50 rounded-xl p-3"><span class="text-xl">☕</span><div><p class="font-semibold text-sm">Breakfast <span class="badge bg-gray-200 text-gray-500 ml-2">Unconfirmed</span></p><p class="text-xs text-gray-500 mt-1">Where to go hasn't been decided yet.</p></div></div>
+          <div class="flex gap-3 bg-green-50 rounded-xl p-3"><span class="text-xl">🍽</span><div><p class="font-semibold text-sm">Lunch — Malini Restaurant, 1:00pm <span class="badge bg-green-100 text-green-700 ml-2">Booked</span></p><p class="text-xs text-gray-500 mt-1">Close to Uluwatu Temple, so the temple can be visited before or after lunch.</p></div></div>
+          <div class="flex gap-3 bg-orange-50 rounded-xl p-3"><span class="text-xl">🌅</span><div><p class="font-semibold text-sm">Dinner — Abracadabra Restaurant, 5:30pm <span class="badge bg-green-100 text-green-700 ml-2">Booked</span></p><p class="text-xs text-gray-500 mt-1">For sunset.</p></div></div>
+          <div class="flex gap-3 bg-blue-50 rounded-xl p-3"><span class="text-xl">🌊</span><div><p class="font-semibold text-sm">Bingin Beach Cliff Walk <span class="badge bg-gray-200 text-gray-500 ml-2">Idea Only</span></p><p class="text-xs text-gray-500 mt-1">Steps from La Cama Bali. Tiered cliff warungs, turquoise water, offshore reef — an easy option if there's spare time.</p></div></div>
+          <div class="flex gap-3 bg-yellow-50 rounded-xl p-3"><span class="text-xl">🍴</span><div><p class="font-semibold text-sm">Other Uluwatu Eats — Options</p><p class="text-xs text-gray-500 mt-1">Rockfish, Tusk, Ours, Ulu Garden — none booked, just options to keep in mind for the area.</p></div></div>
+        </div>
+        <div class="mt-4">
+          <label class="text-xs text-gray-400 uppercase tracking-wide block mb-1">📝 Day Notes</label>
+          <textarea class="day-note" id="note-d2" placeholder="Add your own notes for this day..." onblur="saveNote('d2',this.value)"></textarea>
+        </div>
+        <div class="mt-3 space-y-2">
+          <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold">➕ Custom Activity</p>
+          <div id="custom-d2" class="space-y-1"></div>
+          <button onclick="addCustomActivity('d2')" class="text-xs text-ocean-mid font-semibold hover:underline">+ Add activity</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 3 -->
+    <div class="card mb-2.5 overflow-hidden">
+      <button onclick="toggleAcc('d3')" class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50">
+        <div class="flex items-center gap-3">
+          <span class="badge bg-coral/10 text-coral">20 Sept · Sun</span>
+          <span class="font-semibold text-slate">Breakfast + Hatch Market + Celebrate Sundays</span>
+        </div>
+        <span id="acc-chevron-d3" class="acc-chevron text-gray-400">▾</span>
+      </button>
+      <div id="acc-body-d3" class="acc-body px-5 pb-5 border-t border-gray-100">
+        <div class="flex items-center justify-between mt-3 mb-3">
+          <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide">Day status</p>
+          <select class="status-select confirmed" onchange="updateDayStatus('d3',this)">
+            <option value="pending">🔴 Pending</option>
+            <option value="inprogress">🟡 In Progress</option>
+            <option value="confirmed" selected>🟢 Confirmed</option>
+          </select>
+        </div>
+        <div class="space-y-3">
+          <div class="flex gap-3 bg-yellow-50 rounded-xl p-3"><span class="text-xl">☕</span><div><p class="font-semibold text-sm">Breakfast ~8:30/9:00am — Milk & Madu or Bhukit Cafe</p><p class="text-xs text-gray-500 mt-1">Uluwatu. Choice between the two on the day.</p></div></div>
+          <div class="flex gap-3 bg-green-50 rounded-xl p-3"><span class="text-xl">🛍</span><div><p class="font-semibold text-sm">10:00am — Explore Hatch Uluwatu</p><p class="text-xs text-gray-500 mt-1">Market and browse.</p></div></div>
+          <div class="flex gap-3 bg-gray-50 rounded-xl p-3"><span class="text-xl">🚗</span><div><p class="font-semibold text-sm">11:00am–1:00pm — Making Way to Sundays Beach</p><p class="text-xs text-gray-500 mt-1">Travel time to Sundays Beach Club.</p></div></div>
+          <div class="flex gap-3 bg-purple-50 rounded-xl p-3"><span class="text-xl">🎶</span><div><p class="font-semibold text-sm">All Day — Sundays Beach Club: Celebrate Sundays <span class="badge bg-green-100 text-green-700 ml-2">Booked & Confirmed</span></p><p class="text-xs text-gray-500 mt-1">Event highlights: Sip & Paint, Face Painting, Hair Braiding, Airbrush Tattoos · Science Lab Class, Magician, Tarot Reading · Asado BBQ with live music from Dimas & Latinesia Band · Beachside Fireworks Display finale.</p></div></div>
+        </div>
+        <div class="mt-4">
+          <label class="text-xs text-gray-400 uppercase tracking-wide block mb-1">📝 Day Notes</label>
+          <textarea class="day-note" id="note-d3" placeholder="Add your own notes for this day..." onblur="saveNote('d3',this.value)"></textarea>
+        </div>
+        <div class="mt-3 space-y-2">
+          <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold">➕ Custom Activity</p>
+          <div id="custom-d3" class="space-y-1"></div>
+          <button onclick="addCustomActivity('d3')" class="text-xs text-ocean-mid font-semibold hover:underline">+ Add activity</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---- NUSA LEMBONGAN ---- -->
+  <div class="mb-6">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-11 h-11 rounded-xl bg-ocean-pale flex items-center justify-center text-2xl">🤿</div>
+      <div>
+        <h3 class="font-display text-xl font-bold text-slate">Nusa Lembongan — 2 Nights</h3>
+        <p class="text-sm text-gray-400">21–23 Sept · Gecko Villa & Bungalows · Jungut Batu</p>
+      </div>
+    </div>
+
+    <!-- Day 4 -->
+    <div class="card mb-2.5 overflow-hidden">
+      <button onclick="toggleAcc('d4')" class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50">
+        <div class="flex items-center gap-3">
+          <span class="badge bg-ocean-pale text-ocean-mid">21 Sept · Mon</span>
+          <span class="font-semibold text-slate">Uluwatu → Lembongan + Scooter/Bike Exploring</span>
+        </div>
+        <span id="acc-chevron-d4" class="acc-chevron text-gray-400">▾</span>
+      </button>
+      <div id="acc-body-d4" class="acc-body px-5 pb-5 border-t border-gray-100">
+        <div class="flex items-center justify-between mt-3 mb-3">
+          <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide">Day status</p>
+          <select class="status-select inprogress" onchange="updateDayStatus('d4',this)">
+            <option value="pending">🔴 Pending</option>
+            <option value="inprogress" selected>🟡 In Progress</option>
+            <option value="confirmed">🟢 Confirmed</option>
+          </select>
+        </div>
+        <div class="space-y-3">
+          <div class="flex gap-3 bg-green-50 rounded-xl p-3"><span class="text-xl">🚤</span><div><p class="font-semibold text-sm">Morning — Fast Boat La Cama Bali → Nusa Lembongan <span class="badge bg-green-100 text-green-700 ml-2">Booked & Confirmed</span></p><p class="text-xs text-gray-500 mt-1">Booked through Rocky Fast Cruise. Check out La Cama Bali, transfer + boat to Gecko Villa. If your e-ticket hasn't arrived within 24hrs, contact +62 81339099963 or reservations@rockyfastcruise.com.</p></div></div>
+          <div class="flex gap-3 bg-yellow-50 rounded-xl p-3"><span class="text-xl">🛵</span><div><p class="font-semibold text-sm">Scooter/Bike Rental <span class="badge bg-gray-200 text-gray-500 ml-2">Not Booked</span></p><p class="text-xs text-gray-500 mt-1">Note: Lembongan bans scooter hire for tourists — an electric bicycle or ojek driver is the workaround.</p></div></div>
+          <div class="flex gap-3 bg-cyan-50 rounded-xl p-3"><span class="text-xl">🌉</span><div><p class="font-semibold text-sm">Yellow Bridge <span class="badge bg-gray-200 text-gray-500 ml-2">Not Booked</span></p><p class="text-xs text-gray-500 mt-1">Cross to Nusa Ceningan over the iconic yellow suspension bridge.</p></div></div>
+          <div class="flex gap-3 bg-orange-50 rounded-xl p-3"><span class="text-xl">🍹</span><div><p class="font-semibold text-sm">Ohana's <span class="badge bg-gray-200 text-gray-500 ml-2">Not Booked</span></p><p class="text-xs text-gray-500 mt-1">On the list for a drink/bite — nothing booked yet.</p></div></div>
+        </div>
+        <div class="mt-4">
+          <label class="text-xs text-gray-400 uppercase tracking-wide block mb-1">📝 Day Notes</label>
+          <textarea class="day-note" id="note-d4" placeholder="Add your own notes for this day..." onblur="saveNote('d4',this.value)"></textarea>
+        </div>
+        <div class="mt-3 space-y-2">
+          <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold">➕ Custom Activity</p>
+          <div id="custom-d4" class="space-y-1"></div>
+          <button onclick="addCustomActivity('d4')" class="text-xs text-ocean-mid font-semibold hover:underline">+ Add activity</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 5 -->
+    <div class="card mb-2.5 overflow-hidden">
+      <button onclick="toggleAcc('d5')" class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50">
+        <div class="flex items-center gap-3">
+          <span class="badge bg-ocean-pale text-ocean-mid">22 Sept · Tue</span>
+          <span class="font-semibold text-slate">Snorkeling & Island Tour from Lembongan</span>
+        </div>
+        <span id="acc-chevron-d5" class="acc-chevron text-gray-400">▾</span>
+      </button>
+      <div id="acc-body-d5" class="acc-body px-5 pb-5 border-t border-gray-100">
+        <div class="flex items-center justify-between mt-3 mb-3">
+          <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide">Day status</p>
+          <select class="status-select confirmed" onchange="updateDayStatus('d5',this)">
+            <option value="pending">🔴 Pending</option>
+            <option value="inprogress">🟡 In Progress</option>
+            <option value="confirmed" selected>🟢 Confirmed</option>
+          </select>
+        </div>
+        <div class="space-y-3">
+          <div class="flex gap-3 bg-green-50 rounded-xl p-3"><span class="text-xl">🐠</span><div><p class="font-semibold text-sm">Package H — Snorkeling & Island Tour (Lembongan Trip) <span class="badge bg-green-100 text-green-700 ml-2">Booked & Confirmed</span></p><p class="text-xs text-gray-500 mt-1">9:30am hotel pickup → 10:00am Mangrove tour by traditional boat → 10:30am 3-spot snorkel (Manta Bay/Point, Crystal Bay/Toyapakeh Wall, Mangrove Point) → 1:00pm lunch → 2:00pm island tour by car (Tanjung Ental, Dream Beach, Devil's Tear) → 3:30pm return to hotel. IDR 800,000/adult. Gear, guide, lunch, photos/videos, and insurance included.</p></div></div>
+          <div class="flex gap-3 bg-yellow-50 rounded-xl p-3"><span class="text-xl">💰</span><div><p class="font-semibold text-sm">Bring cash IDR</p><p class="text-xs text-gray-500 mt-1">For self-expenses and optional Devil's Tear cliff area entry (IDR 25,000/adult).</p></div></div>
+        </div>
+        <div class="mt-4">
+          <label class="text-xs text-gray-400 uppercase tracking-wide block mb-1">📝 Day Notes</label>
+          <textarea class="day-note" id="note-d5" placeholder="Add your own notes for this day..." onblur="saveNote('d5',this.value)"></textarea>
+        </div>
+        <div class="mt-3 space-y-2">
+          <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold">➕ Custom Activity</p>
+          <div id="custom-d5" class="space-y-1"></div>
+          <button onclick="addCustomActivity('d5')" class="text-xs text-ocean-mid font-semibold hover:underline">+ Add activity</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---- UBUD ---- -->
+  <div class="mb-6">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-11 h-11 rounded-xl bg-jungle-pale flex items-center justify-center text-2xl">🌾</div>
+      <div>
+        <h3 class="font-display text-xl font-bold text-slate">Ubud — 3 Nights</h3>
+        <p class="text-sm text-gray-400">23–26 Sept · Nadisa Villas · 80571 Ubud</p>
+      </div>
+    </div>
+
+    <!-- Day 6 -->
+    <div class="card mb-2.5 overflow-hidden">
+      <button onclick="toggleAcc('d6')" class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50">
+        <div class="flex items-center gap-3">
+          <span class="badge bg-jungle-pale text-jungle-mid">23 Sept · Wed</span>
+          <span class="font-semibold text-slate">Slow Morning + Lembongan → Ubud + Spa @ Hesa</span>
+        </div>
+        <span id="acc-chevron-d6" class="acc-chevron text-gray-400">▾</span>
+      </button>
+      <div id="acc-body-d6" class="acc-body px-5 pb-5 border-t border-gray-100">
+        <div class="flex items-center justify-between mt-3 mb-3">
+          <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide">Day status</p>
+          <select class="status-select inprogress" onchange="updateDayStatus('d6',this)">
+            <option value="pending">🔴 Pending</option>
+            <option value="inprogress" selected>🟡 In Progress</option>
+            <option value="confirmed">🟢 Confirmed</option>
+          </select>
+        </div>
+        <div class="space-y-3">
+          <div class="flex gap-3 bg-yellow-50 rounded-xl p-3"><span class="text-xl">🌅</span><div><p class="font-semibold text-sm">Slow Morning</p><p class="text-xs text-gray-500 mt-1">No rush — last morning on Gecko Villa before checkout.</p></div></div>
+          <div class="flex gap-3 bg-green-50 rounded-xl p-3"><span class="text-xl">🚤</span><div><p class="font-semibold text-sm">Fast Boat Gecko Villa → Nadisa Villas Ubud <span class="badge bg-green-100 text-green-700 ml-2">Booked & Confirmed</span></p><p class="text-xs text-gray-500 mt-1">Booked through Rocky Fast Cruise. If your e-ticket hasn't arrived within 24hrs, contact +62 81339099963 or reservations@rockyfastcruise.com.</p></div></div>
+          <div class="flex gap-3 bg-pink-50 rounded-xl p-3"><span class="text-xl">💆</span><div><p class="font-semibold text-sm">Spa Session @ Hesa Wellness <span class="badge bg-yellow-100 text-yellow-700 ml-2">Booking Sent — Not Confirmed/Paid</span></p><p class="text-xs text-gray-500 mt-1">Request has been sent out — follow up to confirm and pay.</p></div></div>
+        </div>
+        <div class="mt-4">
+          <label class="text-xs text-gray-400 uppercase tracking-wide block mb-1">📝 Day Notes</label>
+          <textarea class="day-note" id="note-d6" placeholder="Add your own notes for this day..." onblur="saveNote('d6',this.value)"></textarea>
+        </div>
+        <div class="mt-3 space-y-2">
+          <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold">➕ Custom Activity</p>
+          <div id="custom-d6" class="space-y-1"></div>
+          <button onclick="addCustomActivity('d6')" class="text-xs text-ocean-mid font-semibold hover:underline">+ Add activity</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 7 -->
+    <div class="card mb-2.5 overflow-hidden">
+      <button onclick="toggleAcc('d7')" class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50">
+        <div class="flex items-center gap-3">
+          <span class="badge bg-jungle-pale text-jungle-mid">24 Sept · Thu</span>
+          <span class="font-semibold text-slate">River Rafting + Silver Ring Workshop + Ubud Central</span>
+        </div>
+        <span id="acc-chevron-d7" class="acc-chevron text-gray-400">▾</span>
+      </button>
+      <div id="acc-body-d7" class="acc-body px-5 pb-5 border-t border-gray-100">
+        <div class="flex items-center justify-between mt-3 mb-3">
+          <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide">Day status</p>
+          <select class="status-select confirmed" onchange="updateDayStatus('d7',this)">
+            <option value="pending">🔴 Pending</option>
+            <option value="inprogress">🟡 In Progress</option>
+            <option value="confirmed" selected>🟢 Confirmed</option>
+          </select>
+        </div>
+        <div class="space-y-3">
+          <div class="flex gap-3 bg-gray-50 rounded-xl p-3"><span class="text-xl">🚘</span><div><p class="font-semibold text-sm">Hotel Pick-up — 8:00am <span class="badge bg-green-100 text-green-700 ml-2">Booked & Confirmed</span></p><p class="text-xs text-gray-500 mt-1">Pick-up from Nadisa Villas by Genuine Host. Pax: 2. Driver details provided one day prior.</p></div></div>
+          <div class="flex gap-3 bg-blue-50 rounded-xl p-3"><span class="text-xl">🌊</span><div><p class="font-semibold text-sm">River Rafting <span class="badge bg-green-100 text-green-700 ml-2">Booked & Confirmed</span></p><p class="text-xs text-gray-500 mt-1">IDR 850,000/person.</p></div></div>
+          <div class="flex gap-3 bg-orange-50 rounded-xl p-3"><span class="text-xl">💍</span><div><p class="font-semibold text-sm">Silver Ring-Making Workshop <span class="badge bg-green-100 text-green-700 ml-2">Booked & Confirmed</span></p><p class="text-xs text-gray-500 mt-1">IDR 850,000/person.</p></div></div>
+          <div class="flex gap-3 bg-cyan-50 rounded-xl p-3"><span class="text-xl">🏘</span><div><p class="font-semibold text-sm">Explore Ubud Central <span class="badge bg-green-100 text-green-700 ml-2">Booked & Confirmed</span></p><p class="text-xs text-gray-500 mt-1">Part of the day's itinerary.</p></div></div>
+          <div class="flex gap-3 bg-gray-50 rounded-xl p-3"><span class="text-xl">🚗</span><div><p class="font-semibold text-sm">Transportation</p><p class="text-xs text-gray-500 mt-1">IDR 850,000/car/10 hours. Overtime IDR 100K/hour beyond that. Cash to driver.</p></div></div>
+        </div>
+        <div class="mt-4">
+          <label class="text-xs text-gray-400 uppercase tracking-wide block mb-1">📝 Day Notes</label>
+          <textarea class="day-note" id="note-d7" placeholder="Add your own notes for this day..." onblur="saveNote('d7',this.value)"></textarea>
+        </div>
+        <div class="mt-3 space-y-2">
+          <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold">➕ Custom Activity</p>
+          <div id="custom-d7" class="space-y-1"></div>
+          <button onclick="addCustomActivity('d7')" class="text-xs text-ocean-mid font-semibold hover:underline">+ Add activity</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 8 -->
+    <div class="card mb-2.5 overflow-hidden">
+      <button onclick="toggleAcc('d8')" class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50">
+        <div class="flex items-center gap-3">
+          <span class="badge bg-jungle-pale text-jungle-mid">25 Sept · Fri</span>
+          <span class="font-semibold text-slate">ATV + Tegallalang Rice Terraces + Tirta Empul</span>
+        </div>
+        <span id="acc-chevron-d8" class="acc-chevron text-gray-400">▾</span>
+      </button>
+      <div id="acc-body-d8" class="acc-body px-5 pb-5 border-t border-gray-100">
+        <div class="flex items-center justify-between mt-3 mb-3">
+          <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide">Day status</p>
+          <select class="status-select confirmed" onchange="updateDayStatus('d8',this)">
+            <option value="pending">🔴 Pending</option>
+            <option value="inprogress">🟡 In Progress</option>
+            <option value="confirmed" selected>🟢 Confirmed</option>
+          </select>
+        </div>
+        <div class="space-y-3">
+          <div class="flex gap-3 bg-gray-50 rounded-xl p-3"><span class="text-xl">🚘</span><div><p class="font-semibold text-sm">Hotel Pick-up — 8:00am <span class="badge bg-green-100 text-green-700 ml-2">Booked & Confirmed</span></p><p class="text-xs text-gray-500 mt-1">Pick-up from Nadisa Villas by Genuine Host. Pax: 2. Driver details provided one day prior.</p></div></div>
+          <div class="flex gap-3 bg-orange-50 rounded-xl p-3"><span class="text-xl">🏍</span><div><p class="font-semibold text-sm">250cc ATV — 1.5 hours (2 single ATVs) <span class="badge bg-green-100 text-green-700 ml-2">Booked & Confirmed</span></p><p class="text-xs text-gray-500 mt-1">IDR 1,200,000/person.</p></div></div>
+          <div class="flex gap-3 bg-green-50 rounded-xl p-3"><span class="text-xl">🌿</span><div><p class="font-semibold text-sm">Tegallalang Rice Terraces <span class="badge bg-green-100 text-green-700 ml-2">Booked & Confirmed</span></p><p class="text-xs text-gray-500 mt-1">IDR 50,000/pax.</p></div></div>
+          <div class="flex gap-3 bg-blue-50 rounded-xl p-3"><span class="text-xl">💧</span><div><p class="font-semibold text-sm">Tirta Empul Temple <span class="badge bg-green-100 text-green-700 ml-2">Booked & Confirmed</span></p><p class="text-xs text-gray-500 mt-1">IDR 75,000/pax.</p></div></div>
+          <div class="flex gap-3 bg-gray-50 rounded-xl p-3"><span class="text-xl">🚗</span><div><p class="font-semibold text-sm">Transportation</p><p class="text-xs text-gray-500 mt-1">IDR 850,000/car/10 hours. Overtime IDR 100K/hour beyond that. Cash to driver.</p></div></div>
+        </div>
+        <div class="mt-4">
+          <label class="text-xs text-gray-400 uppercase tracking-wide block mb-1">📝 Day Notes</label>
+          <textarea class="day-note" id="note-d8" placeholder="Add your own notes for this day..." onblur="saveNote('d8',this.value)"></textarea>
+        </div>
+        <div class="mt-3 space-y-2">
+          <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold">➕ Custom Activity</p>
+          <div id="custom-d8" class="space-y-1"></div>
+          <button onclick="addCustomActivity('d8')" class="text-xs text-ocean-mid font-semibold hover:underline">+ Add activity</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---- CANGGU ---- -->
+  <div class="mb-6">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-11 h-11 rounded-xl bg-dusk/10 flex items-center justify-center text-2xl">🎶</div>
+      <div>
+        <h3 class="font-display text-xl font-bold text-slate">Canggu — 2 Nights + Departure</h3>
+        <p class="text-sm text-gray-400">26–28 Sept · Aston Canggu Beach Resort · JL. Pantai Batu Bolong</p>
+      </div>
+    </div>
+
+    <!-- Day 9 -->
+    <div class="card mb-2.5 overflow-hidden">
+      <button onclick="toggleAcc('d9')" class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50">
+        <div class="flex items-center gap-3">
+          <span class="badge bg-dusk/10 text-dusk">26 Sept · Sat</span>
+          <span class="font-semibold text-slate">Ubud → Canggu, Slow Arrival Evening</span>
+        </div>
+        <span id="acc-chevron-d9" class="acc-chevron text-gray-400">▾</span>
+      </button>
+      <div id="acc-body-d9" class="acc-body px-5 pb-5 border-t border-gray-100">
+        <div class="flex items-center justify-between mt-3 mb-3">
+          <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide">Day status</p>
+          <select class="status-select confirmed" onchange="updateDayStatus('d9',this)">
+            <option value="pending">🔴 Pending</option>
+            <option value="inprogress">🟡 In Progress</option>
+            <option value="confirmed" selected>🟢 Confirmed</option>
+          </select>
+        </div>
+        <div class="space-y-3">
+          <div class="flex gap-3 bg-gray-50 rounded-xl p-3"><span class="text-xl">🚘</span><div><p class="font-semibold text-sm">Pick-up from Nadisa Villas — ~11:30am <span class="badge bg-green-100 text-green-700 ml-2">Booked & Confirmed</span></p><p class="text-xs text-gray-500 mt-1">Private car transfer, IDR 600,000/car. Drop-off at Aston Canggu Beach Resort.</p></div></div>
+          <div class="flex gap-3 bg-yellow-50 rounded-xl p-3"><span class="text-xl">🍽</span><div><p class="font-semibold text-sm">Take It Slow — Eat & Explore</p><p class="text-xs text-gray-500 mt-1">No fixed plans once you arrive. Settle in, eat, wander Canggu, and decide what you still want to do the next day.</p></div></div>
+        </div>
+        <div class="mt-4">
+          <label class="text-xs text-gray-400 uppercase tracking-wide block mb-1">📝 Day Notes</label>
+          <textarea class="day-note" id="note-d9" placeholder="Add your own notes for this day..." onblur="saveNote('d9',this.value)"></textarea>
+        </div>
+        <div class="mt-3 space-y-2">
+          <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold">➕ Custom Activity</p>
+          <div id="custom-d9" class="space-y-1"></div>
+          <button onclick="addCustomActivity('d9')" class="text-xs text-ocean-mid font-semibold hover:underline">+ Add activity</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 10 -->
+    <div class="card mb-2.5 overflow-hidden">
+      <button onclick="toggleAcc('d10')" class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50">
+        <div class="flex items-center gap-3">
+          <span class="badge bg-dusk/10 text-dusk">27 Sept · Sun</span>
+          <span class="font-semibold text-slate">Chill + Shop for Last Day</span>
+        </div>
+        <span id="acc-chevron-d10" class="acc-chevron text-gray-400">▾</span>
+      </button>
+      <div id="acc-body-d10" class="acc-body px-5 pb-5 border-t border-gray-100">
+        <div class="flex items-center justify-between mt-3 mb-3">
+          <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide">Day status</p>
+          <select class="status-select pending" onchange="updateDayStatus('d10',this)">
+            <option value="pending" selected>🔴 Pending</option>
+            <option value="inprogress">🟡 In Progress</option>
+            <option value="confirmed">🟢 Confirmed</option>
+          </select>
+        </div>
+        <div class="space-y-3">
+          <div class="flex gap-3 bg-green-50 rounded-xl p-3"><span class="text-xl">🛍</span><div><p class="font-semibold text-sm">Chill + Shop</p><p class="text-xs text-gray-500 mt-1">Last full day — take it easy and shop for famous spots (check TikTok for what's trending).</p></div></div>
+          <div class="flex gap-3 bg-yellow-50 rounded-xl p-3"><span class="text-xl">🍴</span><div><p class="font-semibold text-sm">Canggu Restaurant Options</p><p class="text-xs text-gray-500 mt-1">Skool Kitchen and Brunch Club — options so far, nothing booked.</p></div></div>
+          <div class="flex gap-3 bg-pink-50 rounded-xl p-3"><span class="text-xl">💇</span><div><p class="font-semibold text-sm">Hair Treatment — Amika <span class="badge bg-gray-200 text-gray-500 ml-2">If Needed</span></p><p class="text-xs text-gray-500 mt-1">In Canggu, for the final day if needed.</p></div></div>
+        </div>
+        <div class="mt-4">
+          <label class="text-xs text-gray-400 uppercase tracking-wide block mb-1">📝 Day Notes</label>
+          <textarea class="day-note" id="note-d10" placeholder="Add your own notes for this day..." onblur="saveNote('d10',this.value)"></textarea>
+        </div>
+        <div class="mt-3 space-y-2">
+          <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold">➕ Custom Activity</p>
+          <div id="custom-d10" class="space-y-1"></div>
+          <button onclick="addCustomActivity('d10')" class="text-xs text-ocean-mid font-semibold hover:underline">+ Add activity</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day 11 -->
+    <div class="card mb-2.5 overflow-hidden">
+      <button onclick="toggleAcc('d11')" class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50">
+        <div class="flex items-center gap-3">
+          <span class="badge bg-dusk/10 text-dusk">28 Sept · Mon</span>
+          <span class="font-semibold text-slate">Homeward ✈ At the Airport</span>
+        </div>
+        <span id="acc-chevron-d11" class="acc-chevron text-gray-400">▾</span>
+      </button>
+      <div id="acc-body-d11" class="acc-body px-5 pb-5 border-t border-gray-100">
+        <div class="flex items-center justify-between mt-3 mb-3">
+          <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide">Day status</p>
+          <select class="status-select pending" onchange="updateDayStatus('d11',this)">
+            <option value="pending" selected>🔴 Pending</option>
+            <option value="inprogress">🟡 In Progress</option>
+            <option value="confirmed">🟢 Confirmed</option>
+          </select>
+        </div>
+        <div class="space-y-3">
+          <div class="flex gap-3 bg-red-50 rounded-xl p-3 border-2 border-red-200"><span class="text-xl">⏰</span><div><p class="font-semibold text-sm text-red-700">Nothing planned — already at the airport</p><p class="text-xs text-gray-500 mt-1">Emirates EK399 departs 00:35 on 28 Sept (overnight). Check-in closes 22:35.</p></div></div>
+        </div>
+        <div class="mt-4">
+          <label class="text-xs text-gray-400 uppercase tracking-wide block mb-1">📝 Day Notes</label>
+          <textarea class="day-note" id="note-d11" placeholder="Add your own notes for this day..." onblur="saveNote('d11',this.value)"></textarea>
+        </div>
+        <div class="mt-3 space-y-2">
+          <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold">➕ Custom Activity</p>
+          <div id="custom-d11" class="space-y-1"></div>
+          <button onclick="addCustomActivity('d11')" class="text-xs text-ocean-mid font-semibold hover:underline">+ Add activity</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ================================================================ -->
+<!-- TRANSPORT                                                         -->
+<!-- ================================================================ -->
+<div id="panel-transport" class="tab-panel">
+
+  <div class="flex items-center justify-between mb-5">
+    <h2 class="font-display text-2xl font-semibold text-slate">Transport Planner</h2>
+    <button onclick="addTransfer()" class="bg-ocean-mid text-white font-semibold text-xs px-4 py-2 rounded-xl hover:bg-ocean transition-colors">+ Add Transfer</button>
+  </div>
+
+  <div id="transport-list" class="space-y-3 mb-5"></div>
+
+  <!-- Transfer guide -->
+  <div class="card p-5">
+    <h2 class="font-display text-xl font-semibold text-slate mb-4">📍 Transfer Quick Reference</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50"><th class="text-left px-4 py-2.5 rounded-l-xl font-semibold text-gray-500">Transfer</th><th class="text-center px-3 py-2.5 font-semibold text-gray-500">Mode</th><th class="text-center px-3 py-2.5 font-semibold text-gray-500">Duration</th><th class="text-center px-3 py-2.5 rounded-r-xl font-semibold text-gray-500">Est. Cost</th></tr></thead>
+        <tbody class="divide-y divide-gray-50">
+          <tr><td class="px-4 py-2.5 font-medium">Airport (DPS) → La Cama Bali (Uluwatu)</td><td class="px-3 py-2.5 text-center text-green-600">Private Driver ✅ Organized by hotel</td><td class="px-3 py-2.5 text-center">~45–60 min</td><td class="px-3 py-2.5 text-center font-semibold">TBC</td></tr>
+          <tr><td class="px-4 py-2.5 font-medium">La Cama Bali → Gecko Villa (Nusa Lembongan)</td><td class="px-3 py-2.5 text-center text-blue-600">Fast Boat (Rocky Fast Cruise) ✅ Booked</td><td class="px-3 py-2.5 text-center">~1.5 hrs</td><td class="px-3 py-2.5 text-center font-semibold">Booked</td></tr>
+          <tr><td class="px-4 py-2.5 font-medium">Gecko Villa (Nusa Lembongan) → Nadisa Villas Ubud</td><td class="px-3 py-2.5 text-center text-blue-600">Fast Boat (Rocky Fast Cruise) ✅ Booked</td><td class="px-3 py-2.5 text-center">~1–1.5 hrs</td><td class="px-3 py-2.5 text-center font-semibold">Booked</td></tr>
+          <tr><td class="px-4 py-2.5 font-medium">Nadisa Villas Ubud → Aston Canggu</td><td class="px-3 py-2.5 text-center text-ocean-mid">Private Driver</td><td class="px-3 py-2.5 text-center">~1.5 hrs</td><td class="px-3 py-2.5 text-center font-semibold">R600K/car</td></tr>
+          <tr><td class="px-4 py-2.5 font-medium">Aston Canggu → Airport (DPS)</td><td class="px-3 py-2.5 text-center text-ocean-mid">Private Driver</td><td class="px-3 py-2.5 text-center">45–90 min</td><td class="px-3 py-2.5 text-center font-semibold text-red-500">Leave by 21:00!</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-3 tip-box">
+      <p>🛵 <strong>Scooter hire:</strong> Canggu ✅ recommended · Ubud ✅ optional · Lembongan ❌ not permitted for tourists. Always wear a helmet. Negotiate daily rate ~R150–200/day.</p>
+      <p class="mt-1">✈ <strong>Airport transfers:</strong> DPS → La Cama Bali and Aston Canggu → DPS are both being arranged by the respective hotels.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- ================================================================ -->
+<!-- BUDGET TRACKER                                                    -->
+<!-- ================================================================ -->
+<div id="panel-budget" class="tab-panel">
+  <div class="grid grid-cols-3 gap-3 mb-5">
+    <div class="card p-4 text-center">
+      <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Budget</p>
+      <p class="font-display text-2xl font-semibold text-slate" id="bt-total">R65,000</p>
+    </div>
+    <div class="card p-4 text-center">
+      <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Spent</p>
+      <p class="font-display text-2xl font-semibold text-coral" id="bt-spent">R0</p>
+    </div>
+    <div class="card p-4 text-center">
+      <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Remaining</p>
+      <p class="font-display text-2xl font-semibold text-jungle-mid" id="bt-remaining">R65,000</p>
+    </div>
+  </div>
+
+  <div id="bt-warning" class="hidden rounded-xl p-3 mb-4 text-sm font-semibold"></div>
+
+  <div class="grid md:grid-cols-2 gap-4 mb-5">
+    <div class="card p-5">
+      <h3 class="font-semibold text-slate mb-3">Spending by Category</h3>
+      <div style="max-height:250px;display:flex;align-items:center;justify-content:center;">
+        <canvas id="budgetChart"></canvas>
+      </div>
+      <p class="text-center text-xs text-gray-400 mt-2" id="bt-daily-avg">Daily average: R0 / 11 days</p>
+    </div>
+    <div class="card p-5">
+      <h3 class="font-semibold text-slate mb-3">Category Progress</h3>
+      <div id="bt-cat-breakdown" class="space-y-3 text-sm"></div>
+    </div>
+  </div>
+
+  <!-- Add expense -->
+  <div class="card p-5 mb-5">
+    <h3 class="font-semibold text-slate mb-4">➕ Add Expense</h3>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+      <div>
+        <label class="text-xs text-gray-500 uppercase tracking-wide block mb-1">Date</label>
+        <input type="date" id="exp-date" class="cur-input text-sm" min="2026-09-18" max="2026-09-28"/>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 uppercase tracking-wide block mb-1">Category</label>
+        <select id="exp-cat" class="cur-input text-sm">
+          <option value="flights">✈ Flights & Visa</option>
+          <option value="accommodation">🏨 Accommodation</option>
+          <option value="activities">🎯 Activities</option>
+          <option value="food" selected>🍽 Food & Drinks</option>
+          <option value="transport">🚗 Transport</option>
+          <option value="shopping">🛍 Shopping</option>
+          <option value="misc">🔧 Misc/Emergency</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 uppercase tracking-wide block mb-1">Description</label>
+        <input type="text" id="exp-desc" class="cur-input text-sm" placeholder="e.g. Dinner at warung"/>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 uppercase tracking-wide block mb-1">Amount (ZAR or IDR)</label>
+        <div class="flex gap-1">
+          <input type="number" id="exp-amount" class="cur-input text-sm" placeholder="240" min="0" step="1" style="flex:1;"/>
+          <select id="exp-currency" class="cur-input text-sm" style="width:70px;padding:.65rem .4rem;">
+            <option value="ZAR">ZAR</option>
+            <option value="IDR">IDR</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="flex gap-2 flex-wrap">
+      <button onclick="addExpense()" class="bg-ocean-mid text-white font-semibold text-sm px-6 py-2.5 rounded-xl hover:bg-ocean transition-colors">Add Expense</button>
+      <button onclick="clearAllExpenses()" class="text-red-400 text-sm hover:text-red-600 transition-colors px-2">Clear all</button>
+      <button onclick="exportBudget()" class="ml-auto text-xs text-gray-400 hover:text-gray-700 transition-colors border border-gray-200 px-3 py-2 rounded-lg">⬇ Export JSON</button>
+      <label class="text-xs text-gray-400 hover:text-gray-700 transition-colors border border-gray-200 px-3 py-2 rounded-lg cursor-pointer">⬆ Import JSON<input type="file" accept=".json" class="hidden" onchange="importBudget(event)"/></label>
+    </div>
+  </div>
+
+  <div class="card p-5">
+    <h3 class="font-semibold text-slate mb-4">📋 Expense Log</h3>
+    <div class="text-xs text-gray-400 font-semibold uppercase tracking-wide grid grid-cols-4 gap-2 px-4 mb-2">
+      <span>Date / Category</span><span class="col-span-2">Description</span><span class="text-right">Amount</span>
+    </div>
+    <div id="bt-expense-list">
+      <p class="text-center text-gray-400 text-sm py-8">No expenses logged yet. Add your first expense above.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- ================================================================ -->
+<!-- PACKING                                                           -->
+<!-- ================================================================ -->
+<div id="panel-packing" class="tab-panel">
+  <div class="flex items-center justify-between mb-3">
+    <div>
+      <h2 class="font-display text-2xl font-semibold text-slate">Packing Checklist</h2>
+      <p class="text-sm text-gray-400" id="pack-progress-text">0 of 0 items packed</p>
+    </div>
+    <div class="flex gap-2">
+      <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">✓ Packed</span>
+      <span class="text-xs bg-ocean-pale text-ocean-mid px-2 py-1 rounded-full font-semibold">✈ Hand Luggage</span>
+      <button onclick="resetPacking()" class="text-sm text-gray-400 hover:text-gray-600 ml-2">Reset</button>
+    </div>
+  </div>
+  <p class="text-xs text-gray-400 mb-3">Tap once = Packed ✓ · Tap twice = Hand Luggage ✈ · Tap three times = Not packed</p>
+  <div class="pbar mb-6"><div class="pbar-fill bg-ocean-mid" id="pack-progress-bar" style="width:0%"></div></div>
+  <div id="packing-container" class="space-y-5"></div>
+</div>
+
+
+<!-- ================================================================ -->
+<!-- ESSENTIALS                                                        -->
+<!-- ================================================================ -->
+<div id="panel-essentials" class="tab-panel">
+
+  <!-- Sub-navigation -->
+  <div class="flex gap-2 overflow-x-auto pb-2 mb-5" style="scrollbar-width:none;">
+    <button onclick="showEssTab('booking-vault')" id="essbtn-booking-vault" class="essentials-tab active whitespace-nowrap text-xs font-semibold px-4 py-2 rounded-full border-2 border-ocean-mid bg-ocean-mid text-white transition-all">📋 Booking Vault</button>
+    <button onclick="showEssTab('contacts')" id="essbtn-contacts" class="essentials-tab whitespace-nowrap text-xs font-semibold px-4 py-2 rounded-full border-2 border-gray-200 text-gray-500 hover:border-ocean-mid transition-all">📞 Contacts</button>
+    <button onclick="showEssTab('medical')" id="essbtn-medical" class="essentials-tab whitespace-nowrap text-xs font-semibold px-4 py-2 rounded-full border-2 border-gray-200 text-gray-500 hover:border-ocean-mid transition-all">🏥 Medical</button>
+    <button onclick="showEssTab('currency')" id="essbtn-currency" class="essentials-tab whitespace-nowrap text-xs font-semibold px-4 py-2 rounded-full border-2 border-gray-200 text-gray-500 hover:border-ocean-mid transition-all">💱 Currency</button>
+    <button onclick="showEssTab('bahasa')" id="essbtn-bahasa" class="essentials-tab whitespace-nowrap text-xs font-semibold px-4 py-2 rounded-full border-2 border-gray-200 text-gray-500 hover:border-ocean-mid transition-all">🗣 Bahasa</button>
+    <button onclick="showEssTab('tipping')" id="essbtn-tipping" class="essentials-tab whitespace-nowrap text-xs font-semibold px-4 py-2 rounded-full border-2 border-gray-200 text-gray-500 hover:border-ocean-mid transition-all">💡 Tips & Etiquette</button>
+    <button onclick="showEssTab('emergency')" id="essbtn-emergency" class="essentials-tab whitespace-nowrap text-xs font-semibold px-4 py-2 rounded-full border-2 border-gray-200 text-gray-500 hover:border-ocean-mid transition-all">🚨 Emergency</button>
+    <button onclick="showEssTab('documents')" id="essbtn-documents" class="essentials-tab whitespace-nowrap text-xs font-semibold px-4 py-2 rounded-full border-2 border-gray-200 text-gray-500 hover:border-ocean-mid transition-all">📄 Documents</button>
+    <button onclick="showEssTab('stats')" id="essbtn-stats" class="essentials-tab whitespace-nowrap text-xs font-semibold px-4 py-2 rounded-full border-2 border-gray-200 text-gray-500 hover:border-ocean-mid transition-all">📊 Trip Stats</button>
+  </div>
+
+  <!-- BOOKING VAULT -->
+  <div id="esspanel-booking-vault" class="ess-panel">
+    <div class="card p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-display text-2xl font-semibold text-slate">📋 Booking Vault</h2>
+        <button onclick="addVaultEntry()" class="bg-ocean-mid text-white font-semibold text-xs px-4 py-2 rounded-xl hover:bg-ocean transition-colors">+ Add Booking</button>
+      </div>
+      <div id="vault-list" class="divide-y divide-gray-100"></div>
+    </div>
+  </div>
+
+  <!-- LOCAL CONTACTS -->
+  <div id="esspanel-contacts" class="ess-panel hidden">
+    <div class="card p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-display text-2xl font-semibold text-slate">📞 Local Contacts</h2>
+        <button onclick="addContact()" class="bg-ocean-mid text-white font-semibold text-xs px-4 py-2 rounded-xl hover:bg-ocean transition-colors">+ Add Contact</button>
+      </div>
+      <div id="contacts-list" class="divide-y divide-gray-100"></div>
+    </div>
+  </div>
+
+  <!-- MEDICAL -->
+  <div id="esspanel-medical" class="ess-panel hidden">
+    <div class="space-y-4">
+      <div class="tip-box mb-3">Always travel with your insurance policy number and emergency line saved offline.</div>
+      <div id="medical-cards" class="space-y-4"></div>
+    </div>
+  </div>
+
+  <!-- CURRENCY -->
+  <div id="esspanel-currency" class="ess-panel hidden">
+    <div class="card p-5 mb-5">
+      <h2 class="font-display text-2xl font-semibold text-slate mb-4">💱 Currency Converter</h2>
+      <p class="text-xs text-gray-400 mb-4">Rates: R1 ZAR ≈ 1,041 IDR · R1 ZAR ≈ 0.054 USD · Approximate, check before travel.</p>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div><label class="text-xs text-gray-500 uppercase tracking-wide block mb-1">ZAR (Rand)</label><input type="number" id="cur-zar" class="cur-input" placeholder="100" oninput="convertFrom('zar')"/></div>
+        <div><label class="text-xs text-gray-500 uppercase tracking-wide block mb-1">IDR (Rupiah)</label><input type="number" id="cur-idr" class="cur-input" placeholder="104,100" oninput="convertFrom('idr')"/></div>
+        <div><label class="text-xs text-gray-500 uppercase tracking-wide block mb-1">USD (Dollar)</label><input type="number" id="cur-usd" class="cur-input" placeholder="5.40" oninput="convertFrom('usd')"/></div>
+      </div>
+      <div class="mt-4 bg-golden-pale rounded-xl p-3">
+        <p class="text-xs text-gray-500 font-semibold mb-2 uppercase tracking-wide">Quick Reference ZAR → IDR</p>
+        <div class="grid grid-cols-4 gap-2 text-sm text-center">
+          <div class="bg-white rounded-lg p-2"><p class="font-bold text-ocean-mid">R50</p><p class="text-xs text-gray-500">52,054 IDR</p></div>
+          <div class="bg-white rounded-lg p-2"><p class="font-bold text-ocean-mid">R100</p><p class="text-xs text-gray-500">104,107 IDR</p></div>
+          <div class="bg-white rounded-lg p-2"><p class="font-bold text-ocean-mid">R500</p><p class="text-xs text-gray-500">520,535 IDR</p></div>
+          <div class="bg-white rounded-lg p-2"><p class="font-bold text-ocean-mid">R1,000</p><p class="text-xs text-gray-500">1,041,070 IDR</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAHASA -->
+  <div id="esspanel-bahasa" class="ess-panel hidden">
+    <div class="card p-5">
+      <h2 class="font-display text-2xl font-semibold text-slate mb-4">🗣 Bahasa Indonesia — Key Phrases</h2>
+      <div class="space-y-2" id="bahasa-list"></div>
+    </div>
+  </div>
+
+  <!-- TIPPING & ETIQUETTE -->
+  <div id="esspanel-tipping" class="ess-panel hidden">
+    <div class="card p-5">
+      <h2 class="font-display text-2xl font-semibold text-slate mb-4">💡 Tipping & Etiquette</h2>
+      <div class="space-y-3" id="tipping-list"></div>
+    </div>
+  </div>
+
+  <!-- EMERGENCY -->
+  <div id="esspanel-emergency" class="ess-panel hidden">
+    <div class="card p-5">
+      <h2 class="font-display text-2xl font-semibold text-slate mb-4">🚨 Emergency Contacts</h2>
+      <div class="grid md:grid-cols-2 gap-3 text-sm">
+        <div class="bg-red-50 rounded-xl p-3"><p class="font-bold text-red-700 mb-1">🇮🇩 Indonesian Police</p><p class="text-2xl font-bold text-red-600">110</p></div>
+        <div class="bg-red-50 rounded-xl p-3"><p class="font-bold text-red-700 mb-1">🏥 Indonesian Ambulance</p><p class="text-2xl font-bold text-red-600">118 / 119</p></div>
+        <div class="bg-orange-50 rounded-xl p-3"><p class="font-bold text-orange-700 mb-1">🏥 BIMC Hospital Nusa Dua</p><p class="font-bold text-orange-600">+62 361 3000 911</p><p class="text-xs text-gray-500 mt-1">International hospital, English-speaking</p></div>
+        <div class="bg-orange-50 rounded-xl p-3"><p class="font-bold text-orange-700 mb-1">🏥 Siloam Hospital Denpasar</p><p class="font-bold text-orange-600">+62 361 779 900</p><p class="text-xs text-gray-500 mt-1">Good option near the airport area</p></div>
+        <div class="bg-blue-50 rounded-xl p-3"><p class="font-bold text-blue-700 mb-1">🇿🇦 SA Embassy Jakarta</p><p class="font-bold text-blue-600">+62 21 5795 8700</p><p class="text-xs text-gray-500 mt-1">Passport/emergency consular help</p></div>
+        <div class="bg-blue-50 rounded-xl p-3"><p class="font-bold text-blue-700 mb-1">🔥 Bali Fire</p><p class="text-2xl font-bold text-blue-600">113</p></div>
+        <div class="bg-yellow-50 rounded-xl p-3"><p class="font-bold text-golden mb-1">💳 Standard Bank Lost/Stolen</p><p class="font-bold text-golden">0800 020 600 (SA) · +27 11 636 9111</p></div>
+        <div class="bg-yellow-50 rounded-xl p-3"><p class="font-bold text-golden mb-1">💳 FNB Lost/Stolen</p><p class="font-bold text-golden">+27 87 575 9406</p><p class="text-xs text-gray-500 mt-1">24hr international card support</p></div>
+      </div>
+      <div class="mt-4 tip-box">Add your travel insurance emergency number and policy number here before you go.</div>
+    </div>
+  </div>
+
+  <!-- DOCUMENTS -->
+  <div id="esspanel-documents" class="ess-panel hidden">
+    <div class="card p-5">
+      <h2 class="font-display text-2xl font-semibold text-slate mb-4">📄 Documents Checklist</h2>
+      <div class="grid md:grid-cols-2 gap-2 text-sm" id="docs-checklist"></div>
+    </div>
+  </div>
+
+  <!-- TRIP STATS -->
+  <div id="esspanel-stats" class="ess-panel hidden">
+    <div class="card p-5">
+      <h2 class="font-display text-2xl font-semibold text-slate mb-4">📊 Trip Statistics</h2>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="stats-grid"></div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<footer class="bg-jungle-mid text-white/50 text-center text-xs py-5">
+  <p>Bali 2026 · 18–28 September · 2 Travellers · 4 Destinations · Single HTML file — fully offline</p>
+</footer>
+
+<!-- ===== BOTTOM NAV ===== -->
+<nav class="bottom-nav">
+  <button onclick="showTab('today')"     id="btn-today"     class="bnav-btn active"><span class="bnav-icon">🏠</span>Today</button>
+  <button onclick="showTab('itinerary')" id="btn-itinerary" class="bnav-btn"><span class="bnav-icon">📅</span>Itinerary</button>
+  <button onclick="showTab('transport')" id="btn-transport" class="bnav-btn"><span class="bnav-icon">🚗</span>Transport</button>
+  <button onclick="showTab('budget')"    id="btn-budget"    class="bnav-btn"><span class="bnav-icon">💰</span>Budget</button>
+  <button onclick="showTab('packing')"   id="btn-packing"   class="bnav-btn"><span class="bnav-icon">🎒</span>Pack</button>
+  <button onclick="showTab('essentials')"id="btn-essentials"class="bnav-btn"><span class="bnav-icon">🌐</span>Essentials</button>
+</nav>
+
+<!-- Floating buttons -->
+<button class="fab-today" onclick="goToToday()" title="Go to Today">📍</button>
+<button class="fab-expense" onclick="openQuickExpense()" title="Quick add expense">＋</button>
+
+<!-- Quick Add Expense Modal -->
+<div class="modal-overlay" id="quick-expense-modal" onclick="closeQuickExpense(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-slate text-lg">Quick Add Expense</h3>
+      <button onclick="closeQuickExpense()" class="text-gray-400 text-2xl leading-none hover:text-gray-600">×</button>
+    </div>
+    <div class="space-y-3">
+      <select id="qexp-cat" class="cur-input text-sm">
+        <option value="food" selected>🍽 Food & Drinks</option>
+        <option value="activities">🎯 Activities</option>
+        <option value="transport">🚗 Transport</option>
+        <option value="accommodation">🏨 Accommodation</option>
+        <option value="shopping">🛍 Shopping</option>
+        <option value="flights">✈ Flights & Visa</option>
+        <option value="misc">🔧 Misc/Emergency</option>
+      </select>
+      <input type="text" id="qexp-desc" class="cur-input text-sm" placeholder="Description (e.g. Lunch at warung)"/>
+      <div class="flex gap-2">
+        <input type="number" id="qexp-amount" class="cur-input text-sm" placeholder="Amount" min="0" style="flex:1;"/>
+        <select id="qexp-currency" class="cur-input text-sm" style="width:80px;padding:.65rem .5rem;">
+          <option value="ZAR">ZAR</option>
+          <option value="IDR">IDR</option>
+        </select>
+      </div>
+      <button onclick="quickAddExpense()" class="w-full bg-coral text-white font-semibold py-3 rounded-xl hover:bg-coral-light transition-colors text-sm">Add Expense</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ================================================================ -->
+<!-- JAVASCRIPT                                                        -->
+<!-- ================================================================ -->
+<script>
+'use strict';
+
+// ─── TRIP DATA ────────────────────────────────────────────────────────────────
+const TRIP = {
+  departureJNB: new Date('2026-09-17T13:30:00+02:00'),
+  arrivalBali:  '2026-09-18',
+  departBali:   '2026-09-28',
+  nightsInBali: 10,
+  flights: {
+    outbound: { number:'Emirates EK762 & EK368', departs:'2026-09-17 13:30', arrives:'2026-09-18 16:35', layover:'Dubai 3h 30min', pnr:'See email', status:'Confirmed' },
+    return:   { number:'Emirates EK399 & EK763', departs:'2026-09-28 00:35', arrives:'2026-09-28 16:15', layover:'Dubai 3h 30min', pnr:'See email', status:'Confirmed' }
+  },
+  hotels: [
+    { dest:'🌊 Uluwatu',        name:'La Cama Bali',              checkIn:'2026-09-18', checkOut:'2026-09-21', nights:3, confirm:'6368618701', phone:'+62 815 5812 1775', wa:'+62 815 5812 1775', cancel:'12 September 2026' },
+    { dest:'🤿 Nusa Lembongan', name:'Gecko Villa & Bungalows',  checkIn:'2026-09-21', checkOut:'2026-09-23', nights:2, confirm:'5004271274', phone:'+61 478 928 925',  wa:'+61 478 928 925',  cancel:'13 September 2026' },
+    { dest:'🌾 Ubud',           name:'Nadisa Villas',             checkIn:'2026-09-23', checkOut:'2026-09-26', nights:3, confirm:'5949658375', phone:'+62 813 3615 533',  wa:'+62 813 3615 533',  cancel:'17 September 2026' },
+    { dest:'🎶 Canggu',         name:'Aston Canggu Beach Resort', checkIn:'2026-09-26', checkOut:'2026-09-28', nights:2, confirm:'18333613302857967479', phone:'+62 361 3023333', wa:'+62 361 3023333', cancel:'18 September 2026', note:'Flight departs 00:35 on 28 Sept — leave hotel ~21:00 evening of 27th.' }
+  ]
+};
+
+const TOTAL_BUDGET = 65000;
+const CAT = {
+  flights:       { label:'Flights & Visa',   emoji:'✈',  allocated:25000, color:'#1a6b6b' },
+  accommodation: { label:'Accommodation',    emoji:'🏨', allocated:16000, color:'#2d5a3d' },
+  activities:    { label:'Activities',       emoji:'🎯', allocated:8000,  color:'#d96b45' },
+  food:          { label:'Food & Drinks',    emoji:'🍽', allocated:7000,  color:'#b8832a' },
+  transport:     { label:'Transport',        emoji:'🚗', allocated:4000,  color:'#7a3d5e' },
+  shopping:      { label:'Shopping',         emoji:'🛍', allocated:2000,  color:'#3a7a9b' },
+  misc:          { label:'Misc / Emergency', emoji:'🔧', allocated:3000,  color:'#9b4a4a' },
+};
+
+const STORAGE_EXP   = 'bali2026v2_expenses';
+const STORAGE_PACK  = 'bali2026v2_packing';
+const STORAGE_NOTES = 'bali2026v2_notes';
+const STORAGE_DAY_STATUS = 'bali2026v2_daystatus';
+const STORAGE_TRANSFERS  = 'bali2026v2_transfers';
+const STORAGE_VAULT      = 'bali2026v2_vault';
+const STORAGE_CONTACTS   = 'bali2026v2_contacts';
+const STORAGE_CUSTOM     = 'bali2026v2_custom';
+
+const RATES = { zarToIdr: 1041.07, zarToUsd: 0.054 };
+
+// ─── DARK MODE ────────────────────────────────────────────────────────────────
+function toggleDark() {
+  document.body.classList.toggle('dark');
+  const btn = document.getElementById('dark-toggle');
+  btn.textContent = document.body.classList.contains('dark') ? '☀ Light Mode' : '🌙 Dark Mode';
+  localStorage.setItem('bali2026_dark', document.body.classList.contains('dark') ? '1' : '0');
+}
+if (localStorage.getItem('bali2026_dark') === '1') {
+  document.body.classList.add('dark');
+  const btn = document.getElementById('dark-toggle');
+  if (btn) btn.textContent = '☀ Light Mode';
+}
+
+// ─── COUNTDOWN ────────────────────────────────────────────────────────────────
+function updateCountdown() {
+  const diff = TRIP.departureJNB - new Date();
+  if (diff <= 0) {
+    ['cd-days','cd-hours','cd-mins','cd-secs'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.textContent='0';
+    });
+    return;
+  }
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  document.getElementById('cd-days').textContent  = String(d).padStart(2,'0');
+  document.getElementById('cd-hours').textContent = String(h).padStart(2,'0');
+  document.getElementById('cd-mins').textContent  = String(m).padStart(2,'0');
+  document.getElementById('cd-secs').textContent  = String(s).padStart(2,'0');
+}
+updateCountdown();
+setInterval(updateCountdown, 1000);
+
+// ─── TAB NAVIGATION ───────────────────────────────────────────────────────────
+const TAB_NAMES = ['today','itinerary','transport','budget','packing','essentials'];
+function showTab(name) {
+  TAB_NAMES.forEach(t => {
+    document.getElementById('panel-' + t).classList.remove('active');
+    const btn = document.getElementById('btn-' + t);
+    if (btn) btn.classList.remove('active');
+  });
+  document.getElementById('panel-' + name).classList.add('active');
+  const btn = document.getElementById('btn-' + name);
+  if (btn) btn.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (name === 'today') renderToday();
+  if (name === 'budget') renderBudget();
+  if (name === 'transport') renderTransfers();
+  if (name === 'essentials') renderVault();
+}
+
+function goToToday() {
+  showTab('today');
+}
+
+// ─── ACCORDION ────────────────────────────────────────────────────────────────
+function toggleAcc(id) {
+  const body    = document.getElementById('acc-body-' + id);
+  const chevron = document.getElementById('acc-chevron-' + id);
+  if (!body) return;
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  if (chevron) chevron.classList.toggle('open', !isOpen);
+  // Load notes
+  const noteKey = 'note-' + id;
+  const noteEl = document.getElementById(noteKey);
+  if (noteEl) {
+    const notes = JSON.parse(localStorage.getItem(STORAGE_NOTES) || '{}');
+    noteEl.value = notes[id] || '';
+  }
+  // Load custom activities
+  renderCustomActivities(id);
+}
+
+// ─── DAY STATUS ───────────────────────────────────────────────────────────────
+let dayStatuses = JSON.parse(localStorage.getItem(STORAGE_DAY_STATUS) || '{}');
+function updateDayStatus(dayId, select) {
+  dayStatuses[dayId] = select.value;
+  localStorage.setItem(STORAGE_DAY_STATUS, JSON.stringify(dayStatuses));
+  select.className = 'status-select ' + select.value;
+  updatePendingBanners();
+}
+function loadDayStatuses() {
+  Object.entries(dayStatuses).forEach(([dayId, status]) => {
+    const sel = document.querySelector(`[onchange="updateDayStatus('${dayId}',this)"]`);
+    if (sel) { sel.value = status; sel.className = 'status-select ' + status; }
+  });
+}
+
+// ─── PENDING BANNER (disabled — most items now planned) ───────────────────
+function updatePendingBanners() {
+  ['today-pending-banner','itinerary-pending-banner'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  });
+}
+
+// ─── TODAY VIEW ───────────────────────────────────────────────────────────────
+const DAY_DATA = {
+  '2026-09-17': { label: 'Departure Day 🛫', dest: 'Johannesburg → Bali', summary: 'Flight day! Emirates EK762 departs 13:30 JNB. Dubai layover ~3h 30min. Arrive Bali tomorrow.', blocks: [
+    { time:'Morning', items:['Final packing check', 'Head to OR Tambo by 10:00', 'Check in Emirates — PNR see email'] },
+    { time:'Afternoon', items:['Departs JNB 13:30 · EK762 JNB→DXB'] },
+    { time:'Evening', items:['Dubai layover ~3h 30min', 'Board EK368 DXB→DPS'] }
+  ]},
+  '2026-09-18': { label: 'Arrival Day 🌊', dest: 'Uluwatu', summary: 'Land Bali 16:35. Airport transfer organized by La Cama Bali. Gojek/Grab for dinner in — no going out.', blocks: [
+    { time:'Afternoon', items:['Arrive DPS ~16:35', 'Transfer organized by La Cama Bali — they\'ll be in contact 1–2 days before'] },
+    { time:'Evening', items:['Gojek/Grab for food & necessities — not going out'] }
+  ]},
+  '2026-09-19': { label: 'Uluwatu Day 2 🍽', dest: 'Uluwatu', summary: 'Breakfast unconfirmed. Lunch @ Malini (1pm, booked, near Uluwatu Temple). Dinner @ Abracadabra (5:30pm, booked, sunset).', blocks: [
+    { time:'Breakfast — unconfirmed', items:['Spot not decided yet'] },
+    { time:'Lunch — 1:00pm, booked', items:['Malini Restaurant (near Uluwatu Temple)'] },
+    { time:'Dinner — 5:30pm, booked', items:['Abracadabra Restaurant, for sunset'] },
+    { time:'Ideas / other options', items:['Bingin Beach Cliff Walk', 'Other eats: Rockfish, Tusk, Ours, Ulu Garden'] }
+  ]},
+  '2026-09-20': { label: 'Celebrate Sundays 🎶', dest: 'Uluwatu', summary: 'Breakfast, Hatch Uluwatu market, then all day at Sundays Beach Club for Celebrate Sundays (booked).', blocks: [
+    { time:'~8:30/9:00am', items:['Breakfast — Milk & Madu or Bhukit Cafe'] },
+    { time:'10:00am', items:['Explore Hatch Uluwatu (market)'] },
+    { time:'11:00am–1:00pm', items:['Making way to Sundays Beach'] },
+    { time:'All Day — booked & confirmed', items:['Sundays Beach Club: Celebrate Sundays — Sip & Paint, face painting, hair braiding, airbrush tattoos, Science Lab, Magician, Tarot Reading, Asado BBQ + live band, beachside fireworks finale'] }
+  ]},
+  '2026-09-21': { label: 'Uluwatu → Lembongan 🤿', dest: 'Uluwatu/Nusa Lembongan', summary: 'Fast boat to Nusa Lembongan (booked via Rocky Fast Cruise), then scooter/bike exploring.', blocks: [
+    { time:'Morning', items:['Fast boat La Cama Bali → Gecko Villa — booked & confirmed (Rocky Fast Cruise)'] },
+    { time:'Afternoon', items:['Scooter/bike rental (not booked)', 'Yellow Bridge (not booked)', "Ohana's (not booked)"] }
+  ]},
+  '2026-09-22': { label: 'Lembongan Snorkel & Island Tour 🤿', dest: 'Nusa Lembongan', summary: 'Package H — snorkeling & island tour, booked & confirmed.', blocks: [
+    { time:'9:30am–3:30pm', items:['Mangrove tour', '3-spot snorkel (Manta Bay, Crystal Bay, Mangrove Point)', 'Lunch', 'Island tour (Tanjung Ental, Dream Beach, Devil\'s Tear)'] }
+  ]},
+  '2026-09-23': { label: 'Lembongan → Ubud 🌾', dest: 'Nusa Lembongan/Ubud', summary: 'Slow morning, fast boat to Ubud (booked), spa @ Hesa (sent, not confirmed/paid).', blocks: [
+    { time:'Morning', items:['Slow morning', 'Fast boat Gecko Villa → Nadisa Villas — booked & confirmed (Rocky Fast Cruise)'] },
+    { time:'Afternoon', items:['Spa session @ Hesa Wellness — booking sent, not confirmed/paid'] }
+  ]},
+  '2026-09-24': { label: 'Ubud: Rafting + Silver Ring + Ubud Central 🌾', dest: 'Ubud', summary: 'River rafting, silver ring-making, Ubud Central — booked & confirmed. 8am pickup.', blocks: [
+    { time:'8:00am pickup — booked & confirmed', items:['River rafting (IDR 850K/pp)', 'Silver ring-making workshop (IDR 850K/pp)', 'Explore Ubud Central', 'Transport IDR 850K/car/10hrs'] }
+  ]},
+  '2026-09-25': { label: 'Ubud: ATV + Terraces + Tirta Empul 🌿', dest: 'Ubud', summary: 'ATV, Tegallalang, Tirta Empul — booked & confirmed. 8am pickup.', blocks: [
+    { time:'8:00am pickup — booked & confirmed', items:['250cc ATV, 2 single ATVs (IDR 1,200K/pp)', 'Tegallalang Rice Terraces (IDR 50K/pax)', 'Tirta Empul Temple (IDR 75K/pax)', 'Transport IDR 850K/car/10hrs'] }
+  ]},
+  '2026-09-26': { label: 'Ubud → Canggu 🎶', dest: 'Ubud/Canggu', summary: 'Pickup ~11:30am, private transfer to Canggu — booked & confirmed. Take it slow on arrival.', blocks: [
+    { time:'~11:30am — booked & confirmed', items:['Pick-up from Nadisa Villas', 'Private transfer to Aston Canggu — IDR 600K/car'] },
+    { time:'Evening', items:['Take it slow — eat & explore', 'Decide Day 27 plans once there'] }
+  ]},
+  '2026-09-27': { label: 'Canggu Last Full Day 🎶', dest: 'Canggu', summary: 'Chill and shop for the last day. Restaurant options and optional hair treatment.', blocks: [
+    { time:'All Day', items:['Chill + shop — check TikTok for famous spots', 'Restaurant options: Skool Kitchen, Brunch Club', 'Hair treatment @ Amika (if needed)'] }
+  ]},
+  '2026-09-28': { label: 'Homeward ✈ At the Airport', dest: 'En route to JNB', summary: 'Nothing planned — already at the airport. Emirates EK399 + EK763 via Dubai. Arrive JNB 16:15.', blocks: [
+    { time:'Overnight', items:['EK399 departs DPS 00:35', 'Dubai layover ~3h 30min', 'EK763 → JNB arrives 16:15'] }
+  ]},
+};
+
+const TRIP_START = new Date('2026-09-17');
+const TRIP_END   = new Date('2026-09-28');
+
+function todayDateStr() {
+  const now = new Date();
+  return now.toISOString().slice(0, 10);
+}
+
+function renderToday() {
+  const today = todayDateStr();
+  const content = document.getElementById('today-content');
+  const day = DAY_DATA[today];
+  updatePendingBanners();
+
+  if (!day) {
+    // Outside trip
+    const daysUntil = Math.ceil((TRIP_START - new Date()) / 86400000);
+    if (daysUntil > 0) {
+      content.innerHTML = `
+        <div class="card p-6 mb-4">
+          <div class="text-center">
+            <p class="font-display text-5xl font-bold text-ocean-mid mb-2">${daysUntil}</p>
+            <p class="text-gray-500">days until departure</p>
+          </div>
+        </div>
+        <div class="card p-5 mb-4">
+          <h3 class="font-semibold text-slate mb-3">✅ Pre-Departure Checklist</h3>
+          <div class="space-y-2 text-sm text-gray-600">
+            <p>• Confirm Hesa Wellness Spa booking + pay</p>
+            <p>• Firm up Uluwatu day 2 plans (sunset dinner spot, Bambu Fitness)</p>
+            <p>• La Cama Bali airport transfer — awaiting their contact 1–2 days before</p>
+            <p>• Notify banks of travel dates</p>
+            <p>• Download Grab + Gojek apps</p>
+            <p>• Download Bali offline maps</p>
+            <p>• Get USD cash (~$70 p/p for Visa on Arrival)</p>
+          </div>
+        </div>
+        <div class="card p-5">
+          <h3 class="font-semibold text-slate mb-3">📅 Trip Summary</h3>
+          <div class="space-y-2">
+            ${TRIP.hotels.map(h => `
+              <div class="flex items-center gap-3 py-2 border-b border-gray-100">
+                <span class="text-sm font-semibold text-ocean-mid w-24 shrink-0">${h.checkIn.slice(5).replace('-', ' ')}</span>
+                <div><p class="font-semibold text-sm">${h.dest}</p><p class="text-xs text-gray-400">${h.name}</p></div>
+              </div>`).join('')}
+          </div>
+        </div>`;
+      return;
+    } else {
+      content.innerHTML = `<div class="card p-6 text-center"><p class="font-display text-3xl text-ocean-mid mb-2">Welcome home!</p><p class="text-gray-500">Trip completed. What an adventure. 🌴</p></div>`;
+      return;
+    }
+  }
+
+  // Find today's hotel
+  const hotel = TRIP.hotels.find(h => today >= h.checkIn && today < h.checkOut);
+  const spent  = (JSON.parse(localStorage.getItem(STORAGE_EXP) || '[]')).filter(e => e.date === today).reduce((s, e) => s + e.amount, 0);
+  const dailyBudget = Math.round(TOTAL_BUDGET / 11);
+
+  content.innerHTML = `
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+      <div class="card p-4 text-center col-span-2 md:col-span-1">
+        <p class="font-display text-3xl font-semibold text-ocean-mid">${new Date(today + 'T12:00:00').toLocaleDateString('en-ZA', {day:'numeric',month:'short'})}</p>
+        <p class="text-xs text-gray-400 uppercase tracking-wide mt-1">${day.dest}</p>
+      </div>
+      ${hotel ? `<div class="card p-4 col-span-2 md:col-span-2">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">🏨 Tonight's Stay</p>
+        <p class="font-semibold text-sm text-slate">${hotel.name}</p>
+        <p class="text-xs text-gray-500">Check-out: ${hotel.checkOut} · Ref: ${hotel.confirm}</p>
+      </div>` : '<div class="card p-4 col-span-2 md:col-span-2"><p class="text-xs text-gray-400">Travel day</p></div>'}
+      <div class="card p-4 text-center">
+        <p class="font-display text-2xl font-semibold ${spent > dailyBudget ? 'text-coral' : 'text-jungle-mid'}">R${spent.toLocaleString('en-ZA')}</p>
+        <p class="text-xs text-gray-400 uppercase tracking-wide mt-1">Spent today</p>
+        <p class="text-xs text-gray-300">Budget ~R${dailyBudget.toLocaleString('en-ZA')}</p>
+      </div>
+    </div>
+
+    <div class="card p-5 mb-4">
+      <h3 class="font-semibold text-slate mb-1">${day.label}</h3>
+      <p class="text-sm text-gray-500 mb-4">${day.summary}</p>
+      <div class="space-y-3">
+        ${day.blocks.map(b => `
+          <div class="time-block ${b.time.toLowerCase().includes('morning')||b.time.toLowerCase().includes('overnight') ? 'morning' : b.time.toLowerCase().includes('afternoon') ? 'afternoon' : 'evening'}">
+            <p class="font-semibold text-xs uppercase tracking-wide mb-1">${b.time}</p>
+            ${b.items.map(i => `<p class="text-sm">• ${i}</p>`).join('')}
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+// ─── ESSENTIALS SUB-TABS ──────────────────────────────────────────────────────
+function showEssTab(name) {
+  document.querySelectorAll('.ess-panel').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.essentials-tab').forEach(btn => {
+    btn.classList.remove('bg-ocean-mid','text-white','border-ocean-mid');
+    btn.classList.add('border-gray-200','text-gray-500');
+  });
+  document.getElementById('esspanel-' + name).classList.remove('hidden');
+  const btn = document.getElementById('essbtn-' + name);
+  if (btn) {
+    btn.classList.add('bg-ocean-mid','text-white','border-ocean-mid');
+    btn.classList.remove('border-gray-200','text-gray-500');
+  }
+  if (name === 'booking-vault') renderVault();
+  if (name === 'contacts') renderContacts();
+  if (name === 'medical') renderMedical();
+  if (name === 'bahasa') renderBahasa();
+  if (name === 'tipping') renderTipping();
+  if (name === 'documents') renderDocuments();
+  if (name === 'stats') renderStats();
+}
+
+// ─── CURRENCY CONVERTER ───────────────────────────────────────────────────────
+function convertFrom(src) {
+  const zarEl = document.getElementById('cur-zar');
+  const idrEl = document.getElementById('cur-idr');
+  const usdEl = document.getElementById('cur-usd');
+  let zar;
+  if (src === 'zar')      zar = parseFloat(zarEl.value) || 0;
+  else if (src === 'idr') zar = (parseFloat(idrEl.value) || 0) / RATES.zarToIdr;
+  else if (src === 'usd') zar = (parseFloat(usdEl.value) || 0) / RATES.zarToUsd;
+  if (src !== 'zar') zarEl.value = zar ? zar.toFixed(2) : '';
+  if (src !== 'idr') idrEl.value = zar ? (zar * RATES.zarToIdr).toFixed(0) : '';
+  if (src !== 'usd') usdEl.value = zar ? (zar * RATES.zarToUsd).toFixed(2) : '';
+}
+
+// ─── BUDGET TRACKER ───────────────────────────────────────────────────────────
+let expenses = JSON.parse(localStorage.getItem(STORAGE_EXP) || '[]');
+let budgetChart = null;
+function fmt(n) { return 'R' + Number(n).toLocaleString('en-ZA', {minimumFractionDigits:0,maximumFractionDigits:0}); }
+function saveExpenses() { localStorage.setItem(STORAGE_EXP, JSON.stringify(expenses)); }
+
+function addExpense() {
+  const date   = document.getElementById('exp-date').value;
+  const cat    = document.getElementById('exp-cat').value;
+  const desc   = document.getElementById('exp-desc').value.trim();
+  let amount   = parseFloat(document.getElementById('exp-amount').value);
+  const curr   = document.getElementById('exp-currency').value;
+  if (!desc || !amount || amount <= 0) { alert('Please fill in description and amount.'); return; }
+  if (curr === 'IDR') amount = amount / RATES.zarToIdr;
+  expenses.push({ id: Date.now(), date, cat, desc, amount: Math.round(amount) });
+  saveExpenses();
+  document.getElementById('exp-desc').value   = '';
+  document.getElementById('exp-amount').value = '';
+  renderBudget();
+}
+
+function quickAddExpense() {
+  const cat    = document.getElementById('qexp-cat').value;
+  const desc   = document.getElementById('qexp-desc').value.trim();
+  let amount   = parseFloat(document.getElementById('qexp-amount').value);
+  const curr   = document.getElementById('qexp-currency').value;
+  if (!desc || !amount || amount <= 0) { alert('Fill in description and amount.'); return; }
+  if (curr === 'IDR') amount = amount / RATES.zarToIdr;
+  const today = todayDateStr();
+  expenses.push({ id: Date.now(), date: (today >= '2026-09-18' && today <= '2026-09-28') ? today : '2026-09-18', cat, desc, amount: Math.round(amount) });
+  saveExpenses();
+  document.getElementById('qexp-desc').value = '';
+  document.getElementById('qexp-amount').value = '';
+  closeQuickExpense();
+  renderBudget();
+}
+
+function deleteExpense(id) {
+  expenses = expenses.filter(e => e.id !== id);
+  saveExpenses();
+  renderBudget();
+}
+
+function clearAllExpenses() {
+  if (!confirm('Clear all expenses? This cannot be undone.')) return;
+  expenses = [];
+  saveExpenses();
+  renderBudget();
+}
+
+function exportBudget() {
+  const data = JSON.stringify({ expenses, exportedAt: new Date().toISOString() }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), { href: url, download: 'bali2026_expenses.json' });
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function importBudget(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.expenses && Array.isArray(data.expenses)) {
+        expenses = data.expenses;
+        saveExpenses();
+        renderBudget();
+        alert('Expenses imported successfully!');
+      }
+    } catch { alert('Invalid JSON file.'); }
+  };
+  reader.readAsText(file);
+}
+
+function renderBudget() {
+  const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
+  const remaining  = TOTAL_BUDGET - totalSpent;
+
+  document.getElementById('bt-spent').textContent     = fmt(totalSpent);
+  document.getElementById('bt-remaining').textContent = fmt(Math.max(0, remaining));
+
+  const warn = document.getElementById('bt-warning');
+  if (totalSpent > TOTAL_BUDGET) {
+    warn.className = 'warn-red rounded-xl p-3 mb-4 text-sm font-semibold';
+    warn.textContent = '⚠️ Over budget by ' + fmt(totalSpent - TOTAL_BUDGET) + '!';
+  } else if (totalSpent > TOTAL_BUDGET * 0.8) {
+    warn.className = 'warn-orange rounded-xl p-3 mb-4 text-sm font-semibold';
+    warn.textContent = '💛 ' + Math.round((totalSpent/TOTAL_BUDGET)*100) + '% of budget used. ' + fmt(remaining) + ' remaining.';
+  } else {
+    warn.className = 'hidden'; warn.textContent = '';
+  }
+
+  document.getElementById('bt-daily-avg').textContent =
+    'Daily average: ' + fmt(Math.round(totalSpent / 11)) + ' / 11 days';
+
+  const catSpend = {};
+  Object.keys(CAT).forEach(k => catSpend[k] = 0);
+  expenses.forEach(e => { if (catSpend[e.cat] !== undefined) catSpend[e.cat] += e.amount; });
+
+  const breakdown = document.getElementById('bt-cat-breakdown');
+  breakdown.innerHTML = Object.entries(CAT).map(([key, c]) => {
+    const spent = catSpend[key] || 0;
+    const pct   = Math.min(100, Math.round((spent / c.allocated) * 100));
+    const over  = spent > c.allocated;
+    return `<div>
+      <div class="flex justify-between text-xs mb-1">
+        <span class="font-medium">${c.emoji} ${c.label}</span>
+        <span class="${over ? 'text-red-500 font-bold' : 'text-gray-500'}">${fmt(spent)} / ${fmt(c.allocated)}</span>
+      </div>
+      <div class="pbar"><div class="pbar-fill ${over ? 'bg-red-400' : ''}" style="width:${pct}%;background:${over ? '' : c.color}"></div></div>
+    </div>`;
+  }).join('');
+
+  const chartData   = Object.entries(CAT).map(([key, c]) => catSpend[key] || 0);
+  const chartColors = Object.values(CAT).map(c => c.color);
+  const chartLabels = Object.values(CAT).map(c => c.emoji + ' ' + c.label);
+  const ctx = document.getElementById('budgetChart').getContext('2d');
+  if (budgetChart) {
+    budgetChart.data.datasets[0].data = chartData;
+    budgetChart.update();
+  } else {
+    budgetChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels: chartLabels, datasets: [{ data: chartData, backgroundColor: chartColors, borderWidth: 2, borderColor: '#fff' }] },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } } },
+        cutout: '68%'
+      }
+    });
+  }
+
+  const list = document.getElementById('bt-expense-list');
+  if (expenses.length === 0) {
+    list.innerHTML = '<p class="text-center text-gray-400 text-sm py-8">No expenses logged yet.</p>';
+    return;
+  }
+  const sorted = [...expenses].sort((a,b) => new Date(a.date||'') - new Date(b.date||''));
+  list.innerHTML = sorted.map(e => {
+    const c = CAT[e.cat] || {};
+    return `<div class="exp-row hover:bg-gray-50 rounded-lg">
+      <div><p class="font-semibold text-xs">${c.emoji || ''} ${c.label || e.cat}</p><p class="text-gray-400 text-xs">${e.date || '—'}</p></div>
+      <div class="col-span-2"><p class="text-sm text-gray-700">${e.desc}</p></div>
+      <div class="flex items-center justify-end gap-2">
+        <span class="font-bold text-sm">${fmt(e.amount)}</span>
+        <button onclick="deleteExpense(${e.id})" class="text-gray-300 hover:text-red-400 text-lg leading-none transition-colors">×</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── PACKING ──────────────────────────────────────────────────────────────────
+// States: '' = not packed, 'packed', 'hand-luggage'
+let packStates = JSON.parse(localStorage.getItem(STORAGE_PACK) || '{}');
+function savePacking() { localStorage.setItem(STORAGE_PACK, JSON.stringify(packStates)); }
+
+function cyclePackItem(itemId) {
+  const current = packStates[itemId] || '';
+  if (current === '')             packStates[itemId] = 'packed';
+  else if (current === 'packed')  packStates[itemId] = 'hand-luggage';
+  else                            packStates[itemId] = '';
+  savePacking();
+  updatePackProgress();
+}
+
+function updatePackProgress() {
+  const all   = document.querySelectorAll('.pack-item');
+  const total = all.length;
+  const done  = Object.values(packStates).filter(v => v === 'packed' || v === 'hand-luggage').length;
+  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+  const handCount = Object.values(packStates).filter(v => v === 'hand-luggage').length;
+  document.getElementById('pack-progress-text').textContent = `${done} of ${total} packed (${handCount} hand luggage)`;
+  document.getElementById('pack-progress-bar').style.width = pct + '%';
+  all.forEach(el => {
+    const id = el.dataset.id;
+    const state = packStates[id] || '';
+    el.className = 'pack-item' + (state ? ' ' + state : '');
+    const btn = el.querySelector('.pack-cycle');
+    if (btn) btn.textContent = state === 'packed' ? '✓' : state === 'hand-luggage' ? '✈' : '';
+  });
+}
+
+function resetPacking() {
+  if (!confirm('Reset packing list?')) return;
+  packStates = {};
+  savePacking();
+  renderPacking();
+}
+
+const PACKING_DATA = [
+  { cat:'📄 Documents & Money', items:['Passport (valid 6+ months beyond 29 Sept)', 'Return flight e-tickets (printed + digital)', 'Travel insurance docs + emergency number', 'USD cash ~$70 p/p for Visa on Arrival', 'Credit/debit cards (notify bank of travel)', 'All hotel booking confirmations', 'Fast boat + dive booking confirmations', 'International driving permit (for scooter)', 'Emergency contacts list (offline)', 'Copies of all docs emailed to yourself']},
+  { cat:'👗 Clothing', items:['Swimwear — 2–3 sets', 'Sarong (for temple visits)', 'Lightweight shirts — 5–6', 'Comfortable shorts/pants — 3–4 pairs', '1 smart outfit for beach clubs', 'Lightweight rain jacket', 'Comfortable walking sandals', 'Flip flops — 2 pairs', 'Sneakers/trainers for walking', 'Light cover-up or kaftan']},
+  { cat:'🌊 Beach & Sun', items:['SPF 50+ sunscreen (reef-safe)', 'Sunglasses with UV protection', 'Sun hat or cap', 'Waterproof phone pouch', 'GoPro or waterproof camera', 'Dry bag for boat/beach days', 'After-sun lotion']},
+  { cat:'💻 Electronics', items:['Phone + charger + power bank', 'Universal travel adapter (Type C)', 'Laptop or tablet (optional)', 'Earbuds or headphones', 'Camera + memory cards + charger', 'E-reader / Kindle']},
+  { cat:'💊 Toiletries & Health', items:['DEET insect repellent (50%+)', 'Imodium + rehydration sachets', 'Antihistamines', 'Paracetamol + Ibuprofen', 'Antiseptic cream + plasters', 'Prescription medications', 'Seasickness tablets (for fast boat!)', 'Sunburn spray/gel', 'Travel-size toiletries']},
+  { cat:'📱 Apps & Pre-Downloads', items:['Grab app downloaded + account ready', 'Gojek app downloaded + account ready', 'Google Maps — Bali area offline', 'WhatsApp for local communication', 'Rocky Fast Cruise fast boats booked (confirm e-ticket)', 'Snorkeling & Island Tour booked (Lembongan Trip)', 'Hesa Wellness Spa session — confirm & pay', 'Airport arrival transfer pre-booked', 'SIM card plan arranged (Telkomsel/XL at airport)']},
+];
+
+function renderPacking() {
+  const container = document.getElementById('packing-container');
+  container.innerHTML = PACKING_DATA.map((section, si) => {
+    const items = section.items.map((item, ii) => {
+      const id    = `pack-${si}-${ii}`;
+      const state = packStates[id] || '';
+      return `<div class="pack-item ${state}" data-id="${id}" onclick="cyclePackItem('${id}')">
+        <div class="pack-cycle">${state === 'packed' ? '✓' : state === 'hand-luggage' ? '✈' : ''}</div>
+        <span class="pack-label text-sm">${item}</span>
+      </div>`;
+    }).join('');
+    return `<div class="card p-4">
+      <h3 class="font-semibold text-slate mb-3">${section.cat}</h3>
+      ${items}
+    </div>`;
+  }).join('');
+  updatePackProgress();
+}
+
+// ─── DAILY NOTES ─────────────────────────────────────────────────────────────
+function saveNote(dayId, value) {
+  const notes = JSON.parse(localStorage.getItem(STORAGE_NOTES) || '{}');
+  notes[dayId] = value;
+  localStorage.setItem(STORAGE_NOTES, JSON.stringify(notes));
+}
+
+// ─── CUSTOM ACTIVITIES ────────────────────────────────────────────────────────
+let customActivities = JSON.parse(localStorage.getItem(STORAGE_CUSTOM) || '{}');
+function saveCustom() { localStorage.setItem(STORAGE_CUSTOM, JSON.stringify(customActivities)); }
+
+function addCustomActivity(dayId) {
+  if (!customActivities[dayId]) customActivities[dayId] = [];
+  customActivities[dayId].push({ time: '', activity: '', notes: '' });
+  saveCustom();
+  renderCustomActivities(dayId);
+}
+
+function updateCustomActivity(dayId, idx, field, value) {
+  if (customActivities[dayId] && customActivities[dayId][idx] !== undefined) {
+    customActivities[dayId][idx][field] = value;
+    saveCustom();
+  }
+}
+
+function deleteCustomActivity(dayId, idx) {
+  if (customActivities[dayId]) {
+    customActivities[dayId].splice(idx, 1);
+    saveCustom();
+    renderCustomActivities(dayId);
+  }
+}
+
+function renderCustomActivities(dayId) {
+  const container = document.getElementById('custom-' + dayId);
+  if (!container) return;
+  const acts = customActivities[dayId] || [];
+  container.innerHTML = acts.map((act, idx) => `
+    <div class="flex gap-2 items-start bg-gray-50 rounded-lg p-2">
+      <input type="text" value="${escHtml(act.time)}" placeholder="Time" class="cur-input text-xs" style="width:70px;" oninput="updateCustomActivity('${dayId}',${idx},'time',this.value)"/>
+      <input type="text" value="${escHtml(act.activity)}" placeholder="Activity" class="cur-input text-xs flex-1" oninput="updateCustomActivity('${dayId}',${idx},'activity',this.value)"/>
+      <input type="text" value="${escHtml(act.notes)}" placeholder="Notes" class="cur-input text-xs flex-1" oninput="updateCustomActivity('${dayId}',${idx},'notes',this.value)"/>
+      <button onclick="deleteCustomActivity('${dayId}',${idx})" class="text-gray-300 hover:text-red-400 text-lg leading-none mt-1">×</button>
+    </div>`).join('');
+}
+
+function escHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── TRANSPORT ────────────────────────────────────────────────────────────────
+let transfers = JSON.parse(localStorage.getItem(STORAGE_TRANSFERS) || 'null');
+if (!transfers) {
+  transfers = [
+    { id:1, from:'Ngurah Rai Airport (DPS)', to:'La Cama Bali', date:'2026-09-18', time:'~17:00', mode:'Private Driver', duration:'~45–60 min', operator:'La Cama Bali (organized)', driver:'', contact:'', confirm:'', costZAR:0, status:'confirmed', notes:'La Cama Bali has organized the transfer and been given flight details — they\'ll be in contact 1–2 days before with details.' },
+    { id:2, from:'La Cama Bali (Uluwatu)', to:'Gecko Villa & Bungalows (Nusa Lembongan)', date:'2026-09-21', time:'', mode:'Fast Boat', duration:'~1.5 hrs', operator:'Rocky Fast Cruise', driver:'', contact:'+62 81339099963 / reservations@rockyfastcruise.com', confirm:'', costZAR:0, status:'confirmed', notes:"If e-ticket not received within 24hrs, contact Rocky Fast Cruise directly." },
+    { id:3, from:'Gecko Villa & Bungalows (Nusa Lembongan)', to:'Nadisa Villas (Ubud)', date:'2026-09-23', time:'', mode:'Fast Boat', duration:'~1–1.5 hrs', operator:'Rocky Fast Cruise', driver:'', contact:'+62 81339099963 / reservations@rockyfastcruise.com', confirm:'', costZAR:0, status:'confirmed', notes:"If e-ticket not received within 24hrs, contact Rocky Fast Cruise directly." }
+  ];
+  localStorage.setItem(STORAGE_TRANSFERS, JSON.stringify(transfers));
+}
+
+function saveTransfers() { localStorage.setItem(STORAGE_TRANSFERS, JSON.stringify(transfers)); }
+
+function addTransfer() {
+  transfers.push({ id: Date.now(), from:'', to:'', date:'', time:'', mode:'Private Driver', duration:'', operator:'', driver:'', contact:'', confirm:'', costZAR:0, status:'pending', notes:'' });
+  saveTransfers();
+  renderTransfers();
+  updatePendingBanners();
+}
+
+function deleteTransfer(id) {
+  if (!confirm('Remove this transfer?')) return;
+  transfers = transfers.filter(t => t.id !== id);
+  saveTransfers();
+  renderTransfers();
+  updatePendingBanners();
+}
+
+function updateTransferStatus(id, val) {
+  const t = transfers.find(t => t.id === id);
+  if (t) { t.status = val; saveTransfers(); updatePendingBanners(); }
+}
+
+function updateTransferField(id, field, val) {
+  const t = transfers.find(t => t.id === id);
+  if (t) { t[field] = val; saveTransfers(); }
+}
+
+function renderTransfers() {
+  const list = document.getElementById('transport-list');
+  if (!list) return;
+  if (transfers.length === 0) {
+    list.innerHTML = '<p class="text-gray-400 text-sm text-center py-6">No transfers added yet. Add one above.</p>';
+    return;
+  }
+  list.innerHTML = transfers.map(t => `
+    <div class="transfer-card">
+      <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50">
+        <div class="transfer-route flex-1">
+          <span>${escHtml(t.from || '—')}</span>
+          <span class="mx-2 text-coral">→</span>
+          <span>${escHtml(t.to || '—')}</span>
+        </div>
+        <select class="status-select ${t.status}" onchange="updateTransferStatus(${t.id},this.value);this.className='status-select '+this.value;">
+          <option value="pending" ${t.status==='pending'?'selected':''}>🔴 Pending</option>
+          <option value="inprogress" ${t.status==='inprogress'?'selected':''}>🟡 In Progress</option>
+          <option value="confirmed" ${t.status==='confirmed'?'selected':''}>🟢 Confirmed</option>
+        </select>
+        <button onclick="deleteTransfer(${t.id})" class="text-gray-300 hover:text-red-400 text-xl ml-1">×</button>
+      </div>
+      <div class="p-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+        <div><label class="text-xs text-gray-400 block mb-1">From</label><input class="cur-input text-sm" value="${escHtml(t.from)}" placeholder="From" oninput="updateTransferField(${t.id},'from',this.value)"/></div>
+        <div><label class="text-xs text-gray-400 block mb-1">To</label><input class="cur-input text-sm" value="${escHtml(t.to)}" placeholder="To" oninput="updateTransferField(${t.id},'to',this.value)"/></div>
+        <div><label class="text-xs text-gray-400 block mb-1">Date</label><input type="date" class="cur-input text-sm" value="${t.date}" oninput="updateTransferField(${t.id},'date',this.value)"/></div>
+        <div><label class="text-xs text-gray-400 block mb-1">Time</label><input class="cur-input text-sm" value="${escHtml(t.time)}" placeholder="e.g. 09:00" oninput="updateTransferField(${t.id},'time',this.value)"/></div>
+        <div><label class="text-xs text-gray-400 block mb-1">Mode</label><input class="cur-input text-sm" value="${escHtml(t.mode)}" placeholder="e.g. Private Driver" oninput="updateTransferField(${t.id},'mode',this.value)"/></div>
+        <div><label class="text-xs text-gray-400 block mb-1">Duration</label><input class="cur-input text-sm" value="${escHtml(t.duration)}" placeholder="e.g. 45 min" oninput="updateTransferField(${t.id},'duration',this.value)"/></div>
+        <div><label class="text-xs text-gray-400 block mb-1">Operator/Driver</label><input class="cur-input text-sm" value="${escHtml(t.operator)}" placeholder="Name or company" oninput="updateTransferField(${t.id},'operator',this.value)"/></div>
+        <div><label class="text-xs text-gray-400 block mb-1">Contact</label><input class="cur-input text-sm" value="${escHtml(t.contact)}" placeholder="+62..." oninput="updateTransferField(${t.id},'contact',this.value)"/></div>
+        <div><label class="text-xs text-gray-400 block mb-1">Confirmation #</label><input class="cur-input text-sm" value="${escHtml(t.confirm)}" placeholder="Booking ref" oninput="updateTransferField(${t.id},'confirm',this.value)"/></div>
+        <div><label class="text-xs text-gray-400 block mb-1">Cost (ZAR)</label><input type="number" class="cur-input text-sm" value="${t.costZAR||0}" placeholder="0" oninput="updateTransferField(${t.id},'costZAR',parseFloat(this.value)||0)"/></div>
+        <div class="col-span-2"><label class="text-xs text-gray-400 block mb-1">Notes</label><input class="cur-input text-sm" value="${escHtml(t.notes)}" placeholder="Any notes..." oninput="updateTransferField(${t.id},'notes',this.value)"/></div>
+      </div>
+    </div>`).join('');
+}
+
+// ─── BOOKING VAULT ────────────────────────────────────────────────────────────
+let vaultEntries = JSON.parse(localStorage.getItem(STORAGE_VAULT) || 'null');
+if (!vaultEntries) {
+  vaultEntries = [
+    { id:1, type:'Hotel',       name:'La Cama Bali',              ref:'6368618701',          date:'2026-09-18' },
+    { id:3, type:'Hotel',       name:'Gecko Villa & Bungalows',   ref:'5004271274',          date:'2026-09-21' },
+    { id:4, type:'Hotel',       name:'Nadisa Villas',             ref:'5949658375',          date:'2026-09-23' },
+    { id:5, type:'Hotel',       name:'Aston Canggu Beach Resort', ref:'18333613302857967479', date:'2026-09-26' },
+    { id:6, type:'Flight',      name:'Emirates EK762 & EK368',    ref:'See email (PNR)',     date:'2026-09-17' },
+    { id:7, type:'Flight',      name:'Emirates EK399 & EK763',    ref:'See email (PNR)',     date:'2026-09-28' },
+  ];
+  localStorage.setItem(STORAGE_VAULT, JSON.stringify(vaultEntries));
+}
+
+function saveVault() { localStorage.setItem(STORAGE_VAULT, JSON.stringify(vaultEntries)); }
+
+function addVaultEntry() {
+  vaultEntries.push({ id: Date.now(), type:'', name:'', ref:'', date:'' });
+  saveVault();
+  renderVault();
+}
+
+function deleteVaultEntry(id) {
+  vaultEntries = vaultEntries.filter(v => v.id !== id);
+  saveVault();
+  renderVault();
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const tmp = document.createElement('div');
+    tmp.textContent = 'Copied!';
+    tmp.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#1a6b6b;color:#fff;padding:.4rem 1rem;border-radius:1rem;z-index:999;font-size:.8rem;font-weight:700;';
+    document.body.appendChild(tmp);
+    setTimeout(() => tmp.remove(), 1500);
+  });
+}
+
+function renderVault() {
+  const list = document.getElementById('vault-list');
+  if (!list) return;
+  if (vaultEntries.length === 0) {
+    list.innerHTML = '<p class="text-gray-400 text-sm text-center py-6">No bookings yet. Add one above.</p>';
+    return;
+  }
+  list.innerHTML = vaultEntries.map(v => `
+    <div class="vault-row">
+      <span class="badge bg-ocean-pale text-ocean-mid text-xs">${escHtml(v.type || '—')}</span>
+      <div>
+        <p class="font-semibold text-sm">${escHtml(v.name)}</p>
+        <p class="text-xs text-gray-400">${escHtml(v.date)}</p>
+      </div>
+      <button onclick="copyToClipboard('${escHtml(v.ref)}')" class="bg-ocean-pale text-ocean-mid text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-ocean-mid hover:text-white transition-colors">
+        📋 ${escHtml(v.ref)}
+      </button>
+      <button onclick="deleteVaultEntry(${v.id})" class="text-gray-300 hover:text-red-400 text-xl">×</button>
+    </div>`).join('');
+}
+
+// ─── LOCAL CONTACTS ───────────────────────────────────────────────────────────
+let contacts = JSON.parse(localStorage.getItem(STORAGE_CONTACTS) || 'null');
+if (!contacts) {
+  contacts = [
+    { id:1, name:'La Cama Bali',              role:'Hotel',       phone:'+62 815 5812 1775', wa:'+62 815 5812 1775' },
+    { id:3, name:'Gecko Villa & Bungalows',    role:'Hotel',       phone:'+61 478 928 925',  wa:'+61 478 928 925' },
+    { id:4, name:'Nadisa Villas',              role:'Hotel',       phone:'+62 813 3615 533', wa:'+62 813 3615 533' },
+    { id:5, name:'Aston Canggu Beach Resort',  role:'Hotel',       phone:'+62 361 3023333',  wa:'+62 361 3023333' },
+    { id:6, name:'Rocky Fast Cruise',          role:'Fast Boat Operator', phone:'+62 81339099963', wa:'+62 81339099963' },
+  ];
+  localStorage.setItem(STORAGE_CONTACTS, JSON.stringify(contacts));
+}
+
+function saveContacts() { localStorage.setItem(STORAGE_CONTACTS, JSON.stringify(contacts)); }
+
+function addContact() {
+  contacts.push({ id: Date.now(), name:'', role:'', phone:'', wa:'' });
+  saveContacts();
+  renderContacts();
+}
+
+function deleteContact(id) {
+  contacts = contacts.filter(c => c.id !== id);
+  saveContacts();
+  renderContacts();
+}
+
+function renderContacts() {
+  const list = document.getElementById('contacts-list');
+  if (!list) return;
+  list.innerHTML = contacts.map(c => `
+    <div class="contact-row">
+      <div class="flex-1">
+        <p class="font-semibold text-sm">${escHtml(c.name) || '<em class="text-gray-400">Name</em>'}</p>
+        <p class="text-xs text-gray-400">${escHtml(c.role)}</p>
+      </div>
+      <div class="flex gap-2 items-center">
+        ${c.phone ? `<a href="tel:${encodeURIComponent(c.phone)}" class="bg-green-100 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-green-200 transition-colors">📞 Call</a>` : ''}
+        ${c.wa ? `<a href="https://wa.me/${c.wa.replace(/[^0-9]/g,'')}" target="_blank" class="bg-emerald-100 text-emerald-700 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-emerald-200 transition-colors">💬 WhatsApp</a>` : ''}
+        <button onclick="deleteContact(${c.id})" class="text-gray-300 hover:text-red-400 text-xl">×</button>
+      </div>
+    </div>`).join('');
+}
+
+// ─── MEDICAL ──────────────────────────────────────────────────────────────────
+const MEDICAL_DATA = [
+  { dest:'🌊 Uluwatu', hotel:'La Cama Bali', clinics:[
+    { name:'BIMC Hospital Kuta', address:'Jl. Bypass Ngurah Rai No.100X, Kuta', phone:'+62 361 761263', dist:'~12 km · 25 min drive' },
+    { name:'RSU Wisma Prashanti', address:'Jl. Raya Kuta 168, Legian', phone:'+62 361 755055', dist:'~14 km · 28 min drive' },
+  ]},
+  { dest:'🤿 Nusa Lembongan', hotel:'Gecko Villa & Bungalows', clinics:[
+    { name:'Lembongan Health Centre', address:'Jl. Raya Jungutbatu, Lembongan', phone:'+62 361 728089', dist:'~1.5 km · 10 min walk' },
+    { name:'Sanglah General Hospital (mainland)', address:'Jl. Diponegoro, Denpasar', phone:'+62 361 227911', dist:'Fast boat + 20 min · Serious emergencies' },
+  ]},
+  { dest:'🌾 Ubud', hotel:'Nadisa Villas', clinics:[
+    { name:'BIMC Hospital Ubud', address:'Jl. Raya Ubud No.36, Ubud', phone:'+62 361 3000 911', dist:'~2 km · 8 min drive' },
+    { name:'Ubud Medical Centre', address:'Jl. Raya Campuhan, Ubud', phone:'+62 361 974911', dist:'~1 km · 5 min drive' },
+  ]},
+  { dest:'🎶 Canggu', hotel:'Aston Canggu Beach Resort', clinics:[
+    { name:'Klinik Utama Kasih Ibu Canggu', address:'Jl. Raya Canggu, Canggu', phone:'+62 361 4455448', dist:'~2.5 km · 8 min drive' },
+    { name:'BIMC Hospital Kuta', address:'Jl. Bypass Ngurah Rai No.100X, Kuta', phone:'+62 361 761263', dist:'~8 km · 20 min drive' },
+  ]},
+];
+
+function renderMedical() {
+  const container = document.getElementById('medical-cards');
+  if (!container) return;
+  container.innerHTML = MEDICAL_DATA.map(d => `
+    <div class="card p-5">
+      <h3 class="font-display text-xl font-semibold text-slate mb-1">${d.dest}</h3>
+      <p class="text-xs text-gray-400 mb-3">${d.hotel}</p>
+      <div class="space-y-2">
+        ${d.clinics.map(c => `
+          <div class="bg-red-50 rounded-xl p-3">
+            <p class="font-semibold text-sm text-red-700">🏥 ${c.name}</p>
+            <p class="text-xs text-gray-600 mt-0.5">📍 ${c.address}</p>
+            <div class="flex gap-3 mt-1">
+              <a href="tel:${c.phone}" class="text-xs font-semibold text-red-600 hover:underline">📞 ${c.phone}</a>
+              <span class="text-xs text-gray-400">${c.dist}</span>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// ─── BAHASA ───────────────────────────────────────────────────────────────────
+const BAHASA = [
+  { phrase:'Terima kasih', pron:'teh-REE-mah KAH-seeh', meaning:'Thank you' },
+  { phrase:'Sama-sama', pron:'SAH-mah SAH-mah', meaning:'You\'re welcome' },
+  { phrase:'Selamat pagi', pron:'seh-LAH-maht PAH-gee', meaning:'Good morning' },
+  { phrase:'Selamat sore', pron:'seh-LAH-maht SOH-reh', meaning:'Good afternoon/evening' },
+  { phrase:'Permisi', pron:'pehr-MEE-see', meaning:'Excuse me / Sorry' },
+  { phrase:'Berapa harganya?', pron:'beh-RAH-pah HAR-gah-nyah', meaning:'How much is it?' },
+  { phrase:'Terlalu mahal', pron:'tehr-LAH-loo mah-HAHL', meaning:'Too expensive' },
+  { phrase:'Tolong', pron:'TOH-long', meaning:'Please / Help' },
+  { phrase:'Di mana...?', pron:'dee MAH-nah', meaning:'Where is...?' },
+  { phrase:'Enak!', pron:'EH-nahk', meaning:'Delicious!' },
+  { phrase:'Air', pron:'AH-eer', meaning:'Water' },
+  { phrase:'Mau ke mana?', pron:'mow keh MAH-nah', meaning:'Where are you going?' },
+  { phrase:'Tidak apa-apa', pron:'TEE-dahk AH-pah AH-pah', meaning:'No problem / Never mind' },
+  { phrase:'Satu / Dua / Tiga', pron:'SAH-too / DOO-ah / TEE-gah', meaning:'One / Two / Three' },
+  { phrase:'Hati-hati!', pron:'hah-TEE hah-TEE', meaning:'Be careful!' },
+];
+
+function renderBahasa() {
+  const list = document.getElementById('bahasa-list');
+  if (!list) return;
+  list.innerHTML = BAHASA.map(b => `
+    <div class="flex gap-3 p-3 bg-gray-50 rounded-xl hover:bg-ocean-pale transition-colors">
+      <div class="w-40 shrink-0">
+        <p class="font-semibold text-sm text-ocean-mid">${b.phrase}</p>
+        <p class="text-xs text-gray-400 italic">${b.pron}</p>
+      </div>
+      <p class="text-sm text-gray-700">${b.meaning}</p>
+    </div>`).join('');
+}
+
+// ─── TIPPING & ETIQUETTE ──────────────────────────────────────────────────────
+const TIPPING = [
+  { title:'Restaurants & Warung', icon:'🍽', body:'Many restaurants include a 10% service charge. If not, 5–10% is appreciated. At warungs, R10–20 is generous.' },
+  { title:'Private Drivers', icon:'🚗', body:'R50–100 per day is a kind tip for a private driver on a full day. For transfers, round up to the nearest R50.' },
+  { title:'Hotel Staff & Housekeeping', icon:'🏨', body:'Leave R30–50 per day for housekeeping if you have a good experience. Hand it to them directly.' },
+  { title:'Massage & Spa', icon:'💆', body:'R50–100 per therapist after a good session. Hesa Wellness and resort spas — R100 is deeply appreciated.' },
+  { title:'Temple Etiquette', icon:'🌺', body:'Wear a sarong and sash — provided free at the gate. Remove shoes at entrances. Never turn your back to a shrine. Photography may be restricted during ceremonies.' },
+  { title:'Haggling', icon:'💰', body:'Expected at markets and souvenir stalls. Start at 30–40% of asking price. Be friendly, smile, stay light. Once you agree a price, you buy.' },
+  { title:'Scooter Checkpoints', icon:'🛵', body:'Police occasionally stop tourists. Ensure you have an international driving permit. Avoid scooters in Nusa Lembongan (banned for tourists).' },
+  { title:'General', icon:'🙏', body:'Balinese people are warm and gracious. A genuine smile and basic Bahasa phrases go a long way. Always ask permission before photographing people or ceremonies.' },
+];
+
+function renderTipping() {
+  const list = document.getElementById('tipping-list');
+  if (!list) return;
+  list.innerHTML = TIPPING.map(t => `
+    <div class="flex gap-3 p-3 bg-golden-pale rounded-xl">
+      <span class="text-2xl">${t.icon}</span>
+      <div>
+        <p class="font-semibold text-sm text-slate mb-0.5">${t.title}</p>
+        <p class="text-sm text-gray-600">${t.body}</p>
+      </div>
+    </div>`).join('');
+}
+
+// ─── DOCUMENTS ────────────────────────────────────────────────────────────────
+const DOCS_LIST = [
+  'Passport (valid 6+ months beyond 29 Sept 2026)',
+  'Return flight e-tickets (printed + digital copy)',
+  'Travel insurance policy + emergency contact number',
+  'USD cash ~$70 each for Visa on Arrival at DPS',
+  'All 5 hotel booking confirmations',
+  'Fast boat booking confirmations (Rocky Fast Cruise)',
+  'Snorkeling & Island Tour booking (Lembongan Trip)',
+  'Hesa Wellness Spa booking confirmation',
+  'Bank cards — notified of travel dates',
+  'Emergency contacts saved offline to phone',
+  'Google Maps — Bali offline area downloaded',
+  'Email all docs to yourself as backup',
+];
+
+function renderDocuments() {
+  const list = document.getElementById('docs-checklist');
+  if (!list) return;
+  const saved = JSON.parse(localStorage.getItem('bali2026_docs') || '{}');
+  list.innerHTML = DOCS_LIST.map((item, i) => {
+    const id = 'doc-' + i;
+    const checked = saved[id] || false;
+    return `<div class="flex items-center gap-2 p-2 rounded-lg ${checked ? 'bg-green-50' : 'bg-gray-50'} cursor-pointer" onclick="toggleDoc('${id}',this)">
+      <input type="checkbox" class="pack-checkbox" ${checked ? 'checked' : ''} onclick="event.stopPropagation()"/>
+      <span class="text-sm ${checked ? 'line-through text-gray-400' : ''}">${item}</span>
+    </div>`;
+  }).join('');
+}
+
+function toggleDoc(id, row) {
+  const saved = JSON.parse(localStorage.getItem('bali2026_docs') || '{}');
+  saved[id] = !saved[id];
+  localStorage.setItem('bali2026_docs', JSON.stringify(saved));
+  renderDocuments();
+}
+
+// ─── TRIP STATS ───────────────────────────────────────────────────────────────
+function renderStats() {
+  const grid = document.getElementById('stats-grid');
+  if (!grid) return;
+  const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
+  const packTotal  = PACKING_DATA.reduce((s, sec) => s + sec.items.length, 0);
+  const packDone   = Object.values(packStates).filter(v => v === 'packed' || v === 'hand-luggage').length;
+  const stats = [
+    { label:'Nights in Bali', value:'10', icon:'🌙' },
+    { label:'Destinations', value:'4', icon:'📍' },
+    { label:'Total Budget', value:'R65,000', icon:'💰' },
+    { label:'Total Spent', value:fmt(totalSpent), icon:'💳' },
+    { label:'Remaining', value:fmt(Math.max(0, TOTAL_BUDGET - totalSpent)), icon:'💚' },
+    { label:'Packing Progress', value:`${packDone}/${packTotal}`, icon:'🎒' },
+    { label:'Flight Time (each way)', value:'~21h 10m', icon:'✈' },
+    { label:'Time Zone Diff', value:'+6hrs (SAST)', icon:'🕐' },
+    { label:'Visa on Arrival', value:'USD $35 p/p', icon:'📋' },
+  ];
+  grid.innerHTML = stats.map(s => `
+    <div class="card p-4 text-center">
+      <p class="text-2xl mb-1">${s.icon}</p>
+      <p class="font-display text-2xl font-semibold text-ocean-mid">${s.value}</p>
+      <p class="text-xs text-gray-400 mt-1">${s.label}</p>
+    </div>`).join('');
+}
+
+// ─── QUICK EXPENSE MODAL ──────────────────────────────────────────────────────
+function openQuickExpense() {
+  document.getElementById('quick-expense-modal').classList.add('open');
+  setTimeout(() => document.getElementById('qexp-desc').focus(), 300);
+}
+function closeQuickExpense(e) {
+  if (!e || e.target === document.getElementById('quick-expense-modal')) {
+    document.getElementById('quick-expense-modal').classList.remove('open');
+  }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Set default expense date
+  const d = document.getElementById('exp-date');
+  const today = todayDateStr();
+  if (d) d.value = (today >= '2026-09-18' && today <= '2026-09-28') ? today : '2026-09-18';
+
+  renderToday();
+  renderBudget();
+  renderPacking();
+  renderTransfers();
+  loadDayStatuses();
+  updatePendingBanners();
+  renderVault();
+});
+
+</script>
+
+<script>if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js?v=2').catch(()=>{})); }</script>
+
+</body>
+</html>
