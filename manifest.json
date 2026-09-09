@@ -1,0 +1,10 @@
+{
+  "name": "Bali 2026",
+  "short_name": "Bali 2026",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5ede0",
+  "theme_color": "#0d5c5c",
+  "description": "Personal Bali 2026 travel planner",
+  "icons": []
+}
